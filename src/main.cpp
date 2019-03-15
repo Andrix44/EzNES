@@ -1,29 +1,32 @@
-#include "glad/glad.h"
-#include "GLFW/glfw3.h"
-#include <iostream>
 #include <stdio.h>
 
+#include "glad/glad.h"
+#include "GLFW/glfw3.h"
 
-int main(){
-    if (!glfwInit()) {
-        std::cout << "Error while initialising glfw!\n";
+#include "cpu.h"
+#include "memory.h"
+//#include "ppu.h"
+
+
+bool SetupWindow(GLFWwindow* window);
+
+int main(int argc, char* argv[]){
+    GLFWwindow* window = NULL;
+    if (SetupWindow(window)) {
         return 1;
     }
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    GLFWwindow* window = glfwCreateWindow(256, 240, "EzNES", NULL, NULL);
-    glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);  // VSync
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cout << "Error while initialising OpenGL!\n";
-    }
-    if (gladLoadGL() == 0) {
-        std::cout << "Error while initialising glad!\n";
+    Cpu cpu;
+    //Ppu ppu;
+    Memory mem;
+    //Memory* mem = new Memory;
+
+    if (!argv[1]) {  // TODO: this freezes glfw, maybe move it somewhere else
+        printf("Please enter the ROM path as an argument.\n");
+        system("pause");
         return 1;
     }
+    mem.LoadROM(argv[1]);
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -40,6 +43,34 @@ int main(){
 
     glfwDestroyWindow(window);
     glfwTerminate();
+
+    //delete cpu;
+    //delete ppu;
+    //delete mem;
+    return 0;
+}
+
+bool SetupWindow(GLFWwindow* window) {
+    if (!glfwInit()) {
+        printf("Error while initialising glfw!\n");
+        return 1;
+    }
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    window = glfwCreateWindow(256, 240, "EzNES", NULL, NULL);
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1);  // VSync
+
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        printf("Error while initialising OpenGL!\n");
+        return 1;
+    }
+    if (gladLoadGL() == 0) {
+        printf("Error while initialising glad!\n");
+        return 1;
+    }
 
     return 0;
 }

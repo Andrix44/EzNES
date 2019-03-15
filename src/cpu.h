@@ -1,24 +1,31 @@
 #pragma once
 
-#include <bitset>
 #include <stdint.h>
+#include <bitset>
+
+#include "memory.h"
+
 
 class Cpu {
 public:
-    Cpu();
-    ~Cpu();
+    void ExecuteCycles(const uint32_t cycles, Memory& mem);
+
 private:
+    void Interpreter(const uint8_t instr);
+
     uint8_t A, X, Y = 0x00;
     uint16_t sp = 0x01FF;
     uint16_t pc = 0x0000;
-    std::bitset<8> flags = 0b00000000;
+    std::bitset<8> flags = 0b00100000;
  /*                     sign-|| |||||
-                     overflow-| |||||
+                    overflow--| |||||
                                 |||||
-                     breakpoint-|||||
-                   BCD(disabled)-||||
-                        interrupt-|||
-                              zero-||
-                              carry-|*/
+                  breakpoint----|||||
+               BCD(disabled)-----||||
+                   interrupt------||| Maybe 1 on init?
+                        zero-------||
+                       carry--------|*/
+
+    uint8_t instr = NULL;
 };
 

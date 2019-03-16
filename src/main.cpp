@@ -26,7 +26,11 @@ int main(int argc, char* argv[]){
         system("pause");
         return 1;
     }
-    mem.LoadROM(argv[1]);
+    if (mem.LoadROM(argv[1])) {
+        printf("An error occured during the ROM loading, stopping emulation!\n");
+        system("pause");
+        return 1;
+    }
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();

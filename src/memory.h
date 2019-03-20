@@ -36,6 +36,12 @@ private:
     uint8_t submapper = NULL;
     size_t prg_ram_size = NULL, eeprom_size = NULL;
     size_t chr_ram_size = NULL, chr_nvram_size = NULL;
+    enum ConsoleType {
+        nes_famicom,
+        vs_system,
+        playchoice,
+        extended
+    } console_type;
     enum Region {
         ntsc,
         pal,

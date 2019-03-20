@@ -42,26 +42,43 @@ bool Memory::ReadHeader() {
         prg_rom_size = header[4] * 16384;
         chr_rom_size = header[5] * 8192;  // 0 means that CHR RAM is being used
         flags_6 = header[6];
-        flags_7 = header[7];
-        prg_ram_size = header[8] * 8192;
-        switch (header[9] & 0x1) { // Maybe this should be ignored
-        case 0:
-            region = ntsc;
-        case 1:
-            region = pal;
-        }
-        // header[10] is mostly unused
-        if ((header[11] + header[12] + header[13] + header[14] + header[15]) != 0) {
+
+        bool overwritten = (header[11] + header[12] + header[13] + header[14] + header[15]) != 0;
+        if (overwritten) {
+            printf("Incorrect header, ignoring bytes 7-15!\n");
             mapper = header[6] >> 4;
-            printf("Incorrect header bytes, only using the lower nibble of the mapper byte!\n");
         }
         else {
+            switch (header[7] & 0x3) { // Can probably be ignored
+            case 0:
+                console_type = nes_famicom;
+            case 1:
+                console_type = vs_system;
+            case 2:
+                console_type = playchoice;
+            case 3:
+                console_type = extended;
+            }
+
+            prg_ram_size = header[8] * 8192;
+
+            switch (header[9] & 0x1) { // Maybe this should be ignored
+            case 0:
+                region = ntsc;
+            case 1:
+                region = pal;
+            }
+
+            // header[10] is mostly unused
             mapper = (header[7] & 0xF0) | (header[6] >> 4);
         }
+
+
     }
     else {  // NES 2.0 header
-        printf("NES 2.0 is currently unsupported, things will break!\n");
-
+        printf("NES 2.0 is currently unsupported!\n");
+        return true;
+        /*
         uint8_t prg_nibble = header[9] & 0x0F;
         if (prg_nibble <= 0xE) {
             prg_rom_size = ((prg_nibble << 8) | header[4]) * 16384;
@@ -98,9 +115,12 @@ bool Memory::ReadHeader() {
         }
         wip0 = header[13];
         wip1 = header[14];
-        wip2 = header[15];
+        wip2 = header[15]; */
     }
 
-    // TODO: log loaded info from the header
+    printf("Header loading successful!\n"
+        "PRG ROM size - %zu, CHR ROM size - %zu \n"
+        "PRG RAM size - %zu, mapper - %u \n",
+        prg_rom_size, chr_rom_size, prg_ram_size, mapper);
     return false;
 }

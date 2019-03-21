@@ -3,18 +3,22 @@
 #include <bitset>
 #include <stdint.h>
 #include <string>
+#include <vector>
 
 
 constexpr uint8_t HEADER_SIZE = 16;
-constexpr uint32_t MEMORY_SIZE = 2 << 15;
+constexpr uint32_t CPU_MEMORY_SIZE = 0x10000;
+constexpr uint16_t PPU_MEMORY_SIZE = 0x4000;
 
 class Memory {
 public:
     bool LoadROM(const char* location);
     bool ReadHeader();
-    uint8_t Read(uint16_t pc);
+    uint8_t Read(const uint16_t pc);
 private:
-    uint8_t* memory = new uint8_t[MEMORY_SIZE];
+    std::vector<uint8_t> cpu_memory = {};
+    std::vector<uint8_t> ppu_memory = {};
+    std::vector<uint8_t> game_data = {};
     FILE* input_ROM = nullptr;
 
     uint8_t header[HEADER_SIZE] = {0 * HEADER_SIZE};
@@ -26,12 +30,12 @@ private:
                   512-byte trainer--|||
                non-volatile memory---||
           nametable mirroring type----|*/
-    std::bitset<8> flags_7 = 0b00000000;
-    /*             mapper(4-7)-++++||||
-                                   ||||
-                      iNES version-++||
-                                     ||
-                        console type-++*/
+    bool prg_ram_battery = false;
+    bool trainer = false;
+    enum Mirroring {
+        horizontal,
+        vertical
+    } mirroring;
     uint16_t mapper = NULL;
     uint8_t submapper = NULL;
     size_t prg_ram_size = NULL, eeprom_size = NULL;

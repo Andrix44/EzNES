@@ -1,5 +1,4 @@
 #include <stdio.h>
-//#include <stdlib.h>
 
 #include "memory.h"
 
@@ -12,15 +11,17 @@ bool Memory::LoadROM(const char* location) {
     // TODO: add more error checking
 
     if (ReadHeader()) {
-        return true;
+        return true; // Error occured
     }
+    uint32_t romsize = HEADER_SIZE + prg_rom_size + chr_rom_size;
+    fread(&game_data[0], 1, romsize, input_ROM);
 
     fclose(input_ROM);
     return false;
 }
 
 bool Memory::ReadHeader() {
-    fread(header, 1, 16, input_ROM);
+    fread(&header[0], 1, 16, input_ROM);
 
     if (header[0] == (int)"N"[0] && header[1] == (int)"E"[0] && header[2] == (int)"S"[0] && header[3] == 0x1A) {
         printf("Compatible format detected!\n");
@@ -39,9 +40,12 @@ bool Memory::ReadHeader() {
         NES_ver_2 = false;
     }
     if (!NES_ver_2) {  // iNES header
-        prg_rom_size = header[4] * 16384;
-        chr_rom_size = header[5] * 8192;  // 0 means that CHR RAM is being used
-        flags_6 = header[6];
+        prg_rom_size = static_cast<size_t>(header[4]) * 16384;
+        chr_rom_size = static_cast<size_t>(header[5]) * 8192;  // 0 means that CHR RAM is being used
+        mirroring = (header[6] & 0x1) ? vertical : horizontal;
+        prg_ram_battery = header[6] & 0x2;
+        trainer = header[6] & 0x4;
+        flags_6 = header[6];  // This can be separated later
 
         bool overwritten = (header[11] + header[12] + header[13] + header[14] + header[15]) != 0;
         if (overwritten) {
@@ -60,7 +64,7 @@ bool Memory::ReadHeader() {
                 console_type = extended;
             }
 
-            prg_ram_size = header[8] * 8192;
+            prg_ram_size = static_cast<size_t>(header[8]) * 8192;
 
             switch (header[9] & 0x1) { // Maybe this should be ignored
             case 0:

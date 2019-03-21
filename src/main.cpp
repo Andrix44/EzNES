@@ -19,7 +19,6 @@ int main(int argc, char* argv[]){
     Cpu cpu;
     //Ppu ppu;
     Memory mem;
-    //Memory* mem = new Memory;
 
     if (!argv[1]) {  // TODO: this freezes glfw, maybe move it somewhere else
         printf("Please enter the ROM path as an argument.\n");
@@ -48,9 +47,6 @@ int main(int argc, char* argv[]){
     glfwDestroyWindow(window);
     glfwTerminate();
 
-    //delete cpu;
-    //delete ppu;
-    //delete mem;
     return 0;
 }
 

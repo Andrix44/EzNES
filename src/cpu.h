@@ -22,7 +22,7 @@ private:
                                 |||||
                   breakpoint----|||||
                BCD(disabled)-----||||
-                   interrupt------||| Maybe 1 on init?
+                   interrupt------||| TODO: Maybe 1 on init?
                         zero-------||
                        carry--------|*/
 

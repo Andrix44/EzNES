@@ -11,10 +11,12 @@
 bool SetupWindow(GLFWwindow* window);
 
 int main(int argc, char* argv[]){
+    /*
     GLFWwindow* window = NULL;
     if (SetupWindow(window)) {
         return 1;
     }
+    */
 
     Cpu cpu;
     //Ppu ppu;
@@ -31,6 +33,11 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
+    if (!mem.SetupMapper()) {
+        printf("An error occured during setup, mapper probably unsupported!\n");
+    }
+
+    /*
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -46,6 +53,7 @@ int main(int argc, char* argv[]){
 
     glfwDestroyWindow(window);
     glfwTerminate();
+    */
 
     return 0;
 }

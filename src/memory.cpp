@@ -14,6 +14,8 @@ bool Memory::LoadROM(const char* location) {
         return true; // Error occured
     }
     uint32_t romsize = HEADER_SIZE + prg_rom_size + chr_rom_size;
+    game_data.resize(romsize);
+    fseek(input_ROM, 0, SEEK_SET);
     fread(&game_data[0], 1, romsize, input_ROM);
 
     fclose(input_ROM);
@@ -40,8 +42,8 @@ bool Memory::ReadHeader() {
         NES_ver_2 = false;
     }
     if (!NES_ver_2) {  // iNES header
-        prg_rom_size = static_cast<size_t>(header[4]) * 16384;
-        chr_rom_size = static_cast<size_t>(header[5]) * 8192;  // 0 means that CHR RAM is being used
+        prg_rom_size = (header[4]) * 16384;
+        chr_rom_size = (header[5]) * 8192;  // 0 means that CHR RAM is being used
         mirroring = (header[6] & 0x1) ? vertical : horizontal;
         prg_ram_battery = header[6] & 0x2;
         trainer = header[6] & 0x4;
@@ -64,7 +66,7 @@ bool Memory::ReadHeader() {
                 console_type = extended;
             }
 
-            prg_ram_size = static_cast<size_t>(header[8]) * 8192;
+            prg_ram_size = (header[8]) * 8192;
 
             switch (header[9] & 0x1) { // Maybe this should be ignored
             case 0:
@@ -123,8 +125,16 @@ bool Memory::ReadHeader() {
     }
 
     printf("Header loading successful!\n"
-        "PRG ROM size - %zu, CHR ROM size - %zu \n"
-        "PRG RAM size - %zu, mapper - %u \n",
+        "PRG ROM size - %u, CHR ROM size - %u \n"
+        "PRG RAM size - %u, mapper - %u \n",
         prg_rom_size, chr_rom_size, prg_ram_size, mapper);
     return false;
+}
+
+bool Memory::SetupMapper() {
+    if (mapper == 0) { // NROM
+        NROM interface(prg_rom_size, cpu_memory, game_data);
+    }
+
+    return 0;
 }

@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <mappers/nrom.h>
+
 
 constexpr uint8_t HEADER_SIZE = 16;
 constexpr uint32_t CPU_MEMORY_SIZE = 0x10000;
@@ -14,6 +16,7 @@ class Memory {
 public:
     bool LoadROM(const char* location);
     bool ReadHeader();
+    bool SetupMapper();
     uint8_t Read(const uint16_t pc);
 private:
     std::vector<uint8_t> cpu_memory = {};
@@ -22,7 +25,7 @@ private:
     FILE* input_ROM = nullptr;
 
     uint8_t header[HEADER_SIZE] = {0 * HEADER_SIZE};
-    size_t prg_rom_size = NULL, chr_rom_size = NULL;
+    uint32_t prg_rom_size = NULL, chr_rom_size = NULL;
     std::bitset<8> flags_6 = 0b00000000;
     /*             mapper(0-3)-++++||||
                                    ||||
@@ -38,8 +41,8 @@ private:
     } mirroring;
     uint16_t mapper = NULL;
     uint8_t submapper = NULL;
-    size_t prg_ram_size = NULL, eeprom_size = NULL;
-    size_t chr_ram_size = NULL, chr_nvram_size = NULL;
+    uint32_t prg_ram_size = NULL, eeprom_size = NULL;
+    uint32_t chr_ram_size = NULL, chr_nvram_size = NULL;
     enum ConsoleType {
         nes_famicom,
         vs_system,

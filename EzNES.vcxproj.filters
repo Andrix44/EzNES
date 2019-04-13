@@ -53,5 +53,8 @@
     <ClInclude Include="src\mappers\nrom.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\mappers\mapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

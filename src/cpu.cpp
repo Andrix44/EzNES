@@ -3,13 +3,15 @@
 
 void Cpu::ExecuteCycles(const uint32_t cycles, Memory& mem) {
     for (uint32_t i = 0; i <= cycles; i++) {
-        //instr = mem.Read(pc);
-        //Interpreter(instr);
+        instr = mem.Read(pc);
+        Interpreter(instr);
     }
 }
 
 void Cpu::Interpreter(const uint8_t instr) {
     int a = 0;
+    ++pc;
+    return;
     /*switch (instr) {
     case 0x00:
     case 0x01:

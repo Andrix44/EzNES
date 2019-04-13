@@ -14,15 +14,19 @@ constexpr uint16_t PPU_MEMORY_SIZE = 0x4000;
 
 class Memory {
 public:
+    Memory();
     bool LoadROM(const char* location);
     bool ReadHeader();
     bool SetupMapper();
     uint8_t Read(const uint16_t pc);
+
 private:
     std::vector<uint8_t> cpu_memory = {};
     std::vector<uint8_t> ppu_memory = {};
     std::vector<uint8_t> game_data = {};
     FILE* input_ROM = nullptr;
+
+    Mapper *curr_mapper;
 
     uint8_t header[HEADER_SIZE] = {0 * HEADER_SIZE};
     uint32_t prg_rom_size = NULL, chr_rom_size = NULL;

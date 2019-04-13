@@ -3,6 +3,10 @@
 #include "memory.h"
 
 
+Memory::Memory() {
+    cpu_memory.resize(0x10000);
+}
+
 bool Memory::LoadROM(const char* location) {
     if (fopen_s(&input_ROM, location, "rb")) {
         printf("Error while opening ROM!\n");
@@ -134,7 +138,24 @@ bool Memory::ReadHeader() {
 bool Memory::SetupMapper() {
     if (mapper == 0) { // NROM
         NROM interface(prg_rom_size, cpu_memory, game_data);
+        curr_mapper = &interface;
     }
 
     return 0;
+}
+
+uint8_t Memory::Read(const uint16_t pc) {
+    printf("Read at %X \n", pc);
+
+    if (pc <= 0x1FFF) {
+        return cpu_memory[pc & 0x1FFF];
+    }
+
+    else if (pc >= 0x2000 && pc <= 0x3FFF) {
+        return cpu_memory[(pc & 0x7) + 0x2000];
+    }
+
+    else {
+        return curr_mapper->MapperRead(pc, cpu_memory);
+    }
 }

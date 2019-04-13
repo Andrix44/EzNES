@@ -34,7 +34,11 @@ int main(int argc, char* argv[]){
     }
 
     if (!mem.SetupMapper()) {
-        printf("An error occured during setup, mapper probably unsupported!\n");
+        printf("An error occured during mapper setup, mapper probably unsupported!\n");
+    }
+
+    while (true) {  // Trying to get the cpu running
+        cpu.ExecuteCycles(1000, mem);
     }
 
     /*

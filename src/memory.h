@@ -15,6 +15,7 @@ constexpr uint16_t PPU_MEMORY_SIZE = 0x4000;
 class Memory {
 public:
     Memory();
+    ~Memory();
     bool LoadROM(const char* location);
     bool ReadHeader();
     bool SetupMapper();

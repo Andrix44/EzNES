@@ -7,6 +7,10 @@ Memory::Memory() {
     cpu_memory.resize(0x10000);
 }
 
+Memory::~Memory() {
+    delete curr_mapper;
+}
+
 bool Memory::LoadROM(const char* location) {
     if (fopen_s(&input_ROM, location, "rb")) {
         printf("Error while opening ROM!\n");
@@ -137,11 +141,11 @@ bool Memory::ReadHeader() {
 
 bool Memory::SetupMapper() {
     if (mapper == 0) { // NROM
-        NROM interface(prg_rom_size, cpu_memory, game_data);
-        curr_mapper = &interface;
+        curr_mapper = new NROM(prg_rom_size, cpu_memory, game_data);
+        return 0;
     }
 
-    return 0;
+    return 1;
 }
 
 uint8_t Memory::Read(const uint16_t pc) {

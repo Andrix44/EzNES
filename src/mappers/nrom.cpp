@@ -6,7 +6,7 @@ NROM::NROM(uint32_t prg_rom_size, std::vector<uint8_t>& cpu_memory, std::vector<
         NROM_256 = true;
     }
 
-    for (int i = 0; i < 16384; ++i) {
+    for (int i = 0; i < 16384; ++i) {  // TODO: replace with some kind of copy
         cpu_memory[0x8000 + i] = game_data[16 + i];
     }
     if (NROM_256) {

@@ -16,12 +16,12 @@ NROM::NROM(uint32_t prg_rom_size, std::vector<uint8_t>& cpu_memory, std::vector<
     }
 }
 
-uint8_t NROM::MapperRead(const uint16_t pc, std::vector<uint8_t>& cpu_memory) {
-    if (pc >= 0x8000) {
-        return cpu_memory[NROM_256 ? pc : ((pc & 0x3FFF) + 0x8000)];
+uint16_t NROM::TranslateAddress(const uint16_t addr) {
+    if (addr >= 0x8000) {
+        return NROM_256 ? addr : ((addr & 0x3FFF) + 0x8000);
     }
 
     else {
-        return cpu_memory[pc];
+        return addr;
     }
 }

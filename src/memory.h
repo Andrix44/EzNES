@@ -19,7 +19,8 @@ public:
     bool LoadROM(const char* location);
     bool ReadHeader();
     bool SetupMapper();
-    uint8_t Read(const uint16_t pc);
+    uint8_t Read(const uint16_t addr);
+    void Write(const uint16_t addr, const uint8_t byte);
 
 private:
     std::vector<uint8_t> cpu_memory = {};

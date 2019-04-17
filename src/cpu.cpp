@@ -4,271 +4,290 @@
 void Cpu::ExecuteCycles(const uint32_t cycles, Memory& mem) {
     for (uint32_t i = 0; i <= cycles; i++) {
         instr = mem.Read(pc);
-        Interpreter(instr);
+        Interpreter(instr, mem);
     }
 }
 
-void Cpu::Interpreter(const uint8_t instr) {
-    int a = 0;
-    ++pc;
-    return;
-    /*switch (instr) {
-    case 0x00:
-    case 0x01:
-    case 0x02:
-    case 0x03:
-    case 0x04:
-    case 0x05:
-    case 0x06:
-    case 0x07:
-    case 0x08:
-    case 0x09:
-    case 0x0a:
-    case 0x0b:
-    case 0x0c:
-    case 0x0d:
-    case 0x0e:
-    case 0x0f:
-    case 0x10:
-    case 0x11:
-    case 0x12:
-    case 0x13:
-    case 0x14:
-    case 0x15:
-    case 0x16:
-    case 0x17:
-    case 0x18:
-    case 0x19:
-    case 0x1a:
-    case 0x1b:
-    case 0x1c:
-    case 0x1d:
-    case 0x1e:
-    case 0x1f:
-    case 0x20:
-    case 0x21:
-    case 0x22:
-    case 0x23:
-    case 0x24:
-    case 0x25:
-    case 0x26:
-    case 0x27:
-    case 0x28:
-    case 0x29:
-    case 0x2a:
-    case 0x2b:
-    case 0x2c:
-    case 0x2d:
-    case 0x2e:
-    case 0x2f:
-    case 0x30:
-    case 0x31:
-    case 0x32:
-    case 0x33:
-    case 0x34:
-    case 0x35:
-    case 0x36:
-    case 0x37:
-    case 0x38:
-    case 0x39:
-    case 0x3a:
-    case 0x3b:
-    case 0x3c:
-    case 0x3d:
-    case 0x3e:
-    case 0x3f:
-    case 0x40:
-    case 0x41:
-    case 0x42:
-    case 0x43:
-    case 0x44:
-    case 0x45:
-    case 0x46:
-    case 0x47:
-    case 0x48:
-    case 0x49:
-    case 0x4a:
-    case 0x4b:
-    case 0x4c:
-    case 0x4d:
-    case 0x4e:
-    case 0x4f:
-    case 0x50:
-    case 0x51:
-    case 0x52:
-    case 0x53:
-    case 0x54:
-    case 0x55:
-    case 0x56:
-    case 0x57:
-    case 0x58:
-    case 0x59:
-    case 0x5a:
-    case 0x5b:
-    case 0x5c:
-    case 0x5d:
-    case 0x5e:
-    case 0x5f:
-    case 0x60:
-    case 0x61:
-    case 0x62:
-    case 0x63:
-    case 0x64:
-    case 0x65:
-    case 0x66:
-    case 0x67:
-    case 0x68:
-    case 0x69:
-    case 0x6a:
-    case 0x6b:
-    case 0x6c:
-    case 0x6d:
-    case 0x6e:
-    case 0x6f:
-    case 0x70:
-    case 0x71:
-    case 0x72:
-    case 0x73:
-    case 0x74:
-    case 0x75:
-    case 0x76:
-    case 0x77:
-    case 0x78:
-    case 0x79:
-    case 0x7a:
-    case 0x7b:
-    case 0x7c:
-    case 0x7d:
-    case 0x7e:
-    case 0x7f:
-    case 0x80:
-    case 0x81:
-    case 0x82:
-    case 0x83:
-    case 0x84:
-    case 0x85:
-    case 0x86:
-    case 0x87:
-    case 0x88:
-    case 0x89:
-    case 0x8a:
-    case 0x8b:
-    case 0x8c:
-    case 0x8d:
-    case 0x8e:
-    case 0x8f:
-    case 0x90:
-    case 0x91:
-    case 0x92:
-    case 0x93:
-    case 0x94:
-    case 0x95:
-    case 0x96:
-    case 0x97:
-    case 0x98:
-    case 0x99:
-    case 0x9a:
-    case 0x9b:
-    case 0x9c:
-    case 0x9d:
-    case 0x9e:
-    case 0x9f:
-    case 0xa0:
-    case 0xa1:
-    case 0xa2:
-    case 0xa3:
-    case 0xa4:
-    case 0xa5:
-    case 0xa6:
-    case 0xa7:
-    case 0xa8:
-    case 0xa9:
-    case 0xaa:
-    case 0xab:
-    case 0xac:
-    case 0xad:
-    case 0xae:
-    case 0xaf:
-    case 0xb0:
-    case 0xb1:
-    case 0xb2:
-    case 0xb3:
-    case 0xb4:
-    case 0xb5:
-    case 0xb6:
-    case 0xb7:
-    case 0xb8:
-    case 0xb9:
-    case 0xba:
-    case 0xbb:
-    case 0xbc:
-    case 0xbd:
-    case 0xbe:
-    case 0xbf:
-    case 0xc0:
-    case 0xc1:
-    case 0xc2:
-    case 0xc3:
-    case 0xc4:
-    case 0xc5:
-    case 0xc6:
-    case 0xc7:
-    case 0xc8:
-    case 0xc9:
-    case 0xca:
-    case 0xcb:
-    case 0xcc:
-    case 0xcd:
-    case 0xce:
-    case 0xcf:
-    case 0xd0:
-    case 0xd1:
-    case 0xd2:
-    case 0xd3:
-    case 0xd4:
-    case 0xd5:
-    case 0xd6:
-    case 0xd7:
-    case 0xd8:
-    case 0xd9:
-    case 0xda:
-    case 0xdb:
-    case 0xdc:
-    case 0xdd:
-    case 0xde:
-    case 0xdf:
-    case 0xe0:
-    case 0xe1:
-    case 0xe2:
-    case 0xe3:
-    case 0xe4:
-    case 0xe5:
-    case 0xe6:
-    case 0xe7:
-    case 0xe8:
-    case 0xe9:
-    case 0xea:
-    case 0xeb:
-    case 0xec:
-    case 0xed:
-    case 0xee:
-    case 0xef:
-    case 0xf0:
-    case 0xf1:
-    case 0xf2:
-    case 0xf3:
-    case 0xf4:
-    case 0xf5:
-    case 0xf6:
-    case 0xf7:
-    case 0xf8:
-    case 0xf9:
-    case 0xfa:
-    case 0xfb:
-    case 0xfc:
-    case 0xfd:
-    case 0xfe:
-    case 0xff:
-    }*/
+void Cpu::Push(const uint8_t byte, Memory& mem) {
+    mem.Write(sp + 0x100, byte);
+    --sp;
+}
+
+uint8_t Cpu::Pop(Memory& mem) {
+    uint8_t temp = mem.Read(sp + 0x100);
+    ++sp;
+    return temp;
+}
+
+void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
+    printf("%X\n", instr);
+    switch (instr) {
+    case 0x00:  // BRK
+        // TODO
+    case 0x01:  // ORA (ind, X)
+        A = A & mem.Read(X + mem.Read(pc + 1));
+        flags[7] = A >> 7;  // TODO: replace with a function
+        flags[6] = A == 0;
+        pc += 2;
+        break;
+    case 0x02: break;
+    case 0x03: break;
+    case 0x04: break;
+    case 0x05: break;
+    case 0x06: break;
+    case 0x07: break;
+    case 0x08: break;
+    case 0x09: break;
+    case 0x0a: break;
+    case 0x0b: break;
+    case 0x0c: break;
+    case 0x0d: break;
+    case 0x0e: break;
+    case 0x0f: break;
+    case 0x10: break;
+    case 0x11: break;
+    case 0x12: break;
+    case 0x13: break;
+    case 0x14: break;
+    case 0x15: break;
+    case 0x16: break;
+    case 0x17: break;
+    case 0x18: break;
+    case 0x19: break;
+    case 0x1a: break;
+    case 0x1b: break;
+    case 0x1c: break;
+    case 0x1d: break;
+    case 0x1e: break;
+    case 0x1f: break;
+    case 0x20: break;
+    case 0x21: break;
+    case 0x22: break;
+    case 0x23: break;
+    case 0x24: break;
+    case 0x25: break;
+    case 0x26: break;
+    case 0x27: break;
+    case 0x28: break;
+    case 0x29: break;
+    case 0x2a: break;
+    case 0x2b: break;
+    case 0x2c: break;
+    case 0x2d: break;
+    case 0x2e: break;
+    case 0x2f: break;
+    case 0x30: break;
+    case 0x31: break;
+    case 0x32: break;
+    case 0x33: break;
+    case 0x34: break;
+    case 0x35: break;
+    case 0x36: break;
+    case 0x37: break;
+    case 0x38: break;
+    case 0x39: break;
+    case 0x3a: break;
+    case 0x3b: break;
+    case 0x3c: break;
+    case 0x3d: break;
+    case 0x3e: break;
+    case 0x3f: break;
+    case 0x40: break;
+    case 0x41: break;
+    case 0x42: break;
+    case 0x43: break;
+    case 0x44: break;
+    case 0x45: break;
+    case 0x46: break;
+    case 0x47: break;
+    case 0x48: break;
+    case 0x49: break;
+    case 0x4a: break;
+    case 0x4b: break;
+    case 0x4c: break;
+    case 0x4d: break;
+    case 0x4e: break;
+    case 0x4f: break;
+    case 0x50: break;
+    case 0x51: break;
+    case 0x52: break;
+    case 0x53: break;
+    case 0x54: break;
+    case 0x55: break;
+    case 0x56: break;
+    case 0x57: break;
+    case 0x58: break;
+    case 0x59: break;
+    case 0x5a: break;
+    case 0x5b: break;
+    case 0x5c: break;
+    case 0x5d: break;
+    case 0x5e: break;
+    case 0x5f: break;
+    case 0x60: break;
+    case 0x61: break;
+    case 0x62: break;
+    case 0x63: break;
+    case 0x64: break;
+    case 0x65: break;
+    case 0x66: break;
+    case 0x67: break;
+    case 0x68: break;
+    case 0x69: break;
+    case 0x6a: break;
+    case 0x6b: break;
+    case 0x6c: break;
+    case 0x6d: break;
+    case 0x6e: break;
+    case 0x6f: break;
+    case 0x70: break;
+    case 0x71: break;
+    case 0x72: break;
+    case 0x73: break;
+    case 0x74: break;
+    case 0x75: break;
+    case 0x76: break;
+    case 0x77: break;
+    case 0x78: break;
+    case 0x79: break;
+    case 0x7a: break;
+    case 0x7b: break;
+    case 0x7c: break;
+    case 0x7d: break;
+    case 0x7e: break;
+    case 0x7f: break;
+    case 0x80: break;
+    case 0x81: break;
+    case 0x82: break;
+    case 0x83: break;
+    case 0x84: break;
+    case 0x85: break;
+    case 0x86: break;
+    case 0x87: break;
+    case 0x88: break;
+    case 0x89: break;
+    case 0x8a: break;
+    case 0x8b: break;
+    case 0x8c: break;
+    case 0x8d: break;
+    case 0x8e: break;
+    case 0x8f: break;
+    case 0x90: break;
+    case 0x91: break;
+    case 0x92: break;
+    case 0x93: break;
+    case 0x94: break;
+    case 0x95: break;
+    case 0x96: break;
+    case 0x97: break;
+    case 0x98: break;
+    case 0x99: break;
+    case 0x9a: break;
+    case 0x9b: break;
+    case 0x9c: break;
+    case 0x9d: break;
+    case 0x9e: break;
+    case 0x9f: break;
+    case 0xa0: break;
+    case 0xa1: break;
+    case 0xa2: break;
+    case 0xa3: break;
+    case 0xa4: break;
+    case 0xa5: break;
+    case 0xa6: break;
+    case 0xa7: break;
+    case 0xa8: break;
+    case 0xa9: break;
+    case 0xaa: break;
+    case 0xab: break;
+    case 0xac: break;
+    case 0xad: break;
+    case 0xae: break;
+    case 0xaf: break;
+    case 0xb0: break;
+    case 0xb1: break;
+    case 0xb2: break;
+    case 0xb3: break;
+    case 0xb4: break;
+    case 0xb5: break;
+    case 0xb6: break;
+    case 0xb7: break;
+    case 0xb8: break;
+    case 0xb9: break;
+    case 0xba: break;
+    case 0xbb: break;
+    case 0xbc: break;
+    case 0xbd: break;
+    case 0xbe: break;
+    case 0xbf: break;
+    case 0xc0: break;
+    case 0xc1: break;
+    case 0xc2: break;
+    case 0xc3: break;
+    case 0xc4: break;
+    case 0xc5: break;
+    case 0xc6: break;
+    case 0xc7: break;
+    case 0xc8: break;
+    case 0xc9: break;
+    case 0xca: break;
+    case 0xcb: break;
+    case 0xcc: break;
+    case 0xcd: break;
+    case 0xce: break;
+    case 0xcf: break;
+    case 0xd0: break;
+    case 0xd1: break;
+    case 0xd2: break;
+    case 0xd3: break;
+    case 0xd4: break;
+    case 0xd5: break;
+    case 0xd6: break;
+    case 0xd7: break;
+    case 0xd8:  // CLD
+        flags[1] = 0;
+        pc += 1;
+        break;
+    case 0xd9: break;
+    case 0xda: break;
+    case 0xdb: break;
+    case 0xdc: break;
+    case 0xdd: break;
+    case 0xde: break;
+    case 0xdf: break;
+    case 0xe0: break;
+    case 0xe1: break;
+    case 0xe2: break;
+    case 0xe3: break;
+    case 0xe4: break;
+    case 0xe5: break;
+    case 0xe6: break;
+    case 0xe7: break;
+    case 0xe8: break;
+    case 0xe9: break;
+    case 0xea: break;
+    case 0xeb: break;
+    case 0xec: break;
+    case 0xed: break;
+    case 0xee: break;
+    case 0xef: break;
+    case 0xf0: break;
+    case 0xf1: break;
+    case 0xf2: break;
+    case 0xf3: break;
+    case 0xf4: break;
+    case 0xf5: break;
+    case 0xf6: break;
+    case 0xf7: break;
+    case 0xf8: break;
+    case 0xf9: break;
+    case 0xfa: break;
+    case 0xfb: break;
+    case 0xfc: break;
+    case 0xfd: break;
+    case 0xfe: break;
+    case 0xff: break;
+    }
+
     // TODO: print registers
 }

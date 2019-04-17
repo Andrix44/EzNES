@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <bitset>
+#include <cassert>
 
 #include "memory.h"
 
@@ -14,10 +15,12 @@ public:
     void ExecuteCycles(const uint32_t cycles, Memory& mem);
 
 private:
-    void Interpreter(const uint8_t instr);
+    void Interpreter(const uint8_t instr, Memory& mem);
+    void Push(const uint8_t byte, Memory& mem);
+    uint8_t Pop(Memory& mem);
 
     uint8_t A = 0x00, X = 0x00, Y = 0x00;
-    uint16_t sp = 0x01FF;
+    uint8_t sp = 0xFF;
     uint16_t pc = 0x8000;  // TODO: make this mapper-dependant !!!!!!!!!!!!!!
     std::bitset<8> flags = 0b00100000;
  /*                     sign-|| |||||

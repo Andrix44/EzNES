@@ -38,7 +38,7 @@ int main(int argc, char* argv[]){
     }
 
     while (true) {  // Trying to get the cpu running
-        cpu.ExecuteCycles(1000, mem);
+        cpu.ExecuteCycles(10, mem);
     }
 
     /*

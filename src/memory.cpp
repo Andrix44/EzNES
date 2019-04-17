@@ -148,18 +148,34 @@ bool Memory::SetupMapper() {
     return 1;
 }
 
-uint8_t Memory::Read(const uint16_t pc) {
-    printf("Read at %X \n", pc);
+uint8_t Memory::Read(const uint16_t addr) {
+    printf("Read at %X \n", addr);
 
-    if (pc <= 0x1FFF) {
-        return cpu_memory[pc & 0x1FFF];
+    if (addr <= 0x1FFF) {
+        return cpu_memory[addr];
     }
 
-    else if (pc >= 0x2000 && pc <= 0x3FFF) {
-        return cpu_memory[(pc & 0x7) + 0x2000];
+    else if (addr >= 0x2000 && addr <= 0x3FFF) {
+        return cpu_memory[(addr & 0x7) + 0x2000];
     }
 
     else {
-        return curr_mapper->MapperRead(pc, cpu_memory);
+        return cpu_memory[curr_mapper->TranslateAddress(addr)];
+    }
+}
+
+void Memory::Write(const uint16_t addr, const uint8_t byte) {
+    printf("Write at %X \n", addr);
+
+    if (addr <= 0x1FFF) {
+        cpu_memory[addr] = byte;
+    }
+
+    else if (addr >= 0x2000 && addr <= 0x3FFF) {
+        cpu_memory[(addr & 0x7) + 0x2000] = byte;
+    }
+
+    else {
+        cpu_memory[curr_mapper->TranslateAddress(addr)] = byte;
     }
 }

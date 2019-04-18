@@ -19,7 +19,7 @@ public:
     bool LoadROM(const char* location);
     bool ReadHeader();
     bool SetupMapper();
-    uint8_t Read(const uint16_t addr);
+    uint8_t Read(const uint16_t addr);  // Maybe make a little-endian double read?
     void Write(const uint16_t addr, const uint8_t byte);
 
 private:
@@ -28,7 +28,7 @@ private:
     std::vector<uint8_t> game_data = {};
     FILE* input_ROM = nullptr;
 
-    Mapper *curr_mapper;
+    Mapper *curr_mapper = nullptr;
 
     uint8_t header[HEADER_SIZE] = {0 * HEADER_SIZE};
     uint32_t prg_rom_size = NULL, chr_rom_size = NULL;

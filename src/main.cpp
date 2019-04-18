@@ -33,7 +33,7 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-    if (!mem.SetupMapper()) {
+    if (mem.SetupMapper()) {
         printf("An error occured during mapper setup, mapper probably unsupported!\n");
     }
 

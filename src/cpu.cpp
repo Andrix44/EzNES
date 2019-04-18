@@ -22,12 +22,11 @@ uint8_t Cpu::Pop(Memory& mem) {
 void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     printf("%X\n", instr);
     switch (instr) {
-    case 0x00:  // BRK
-        // TODO
+    case 0x00: break;
     case 0x01:  // ORA (ind, X)
-        A = A & mem.Read(X + mem.Read(pc + 1));
-        flags[7] = A >> 7;  // TODO: replace with a function
-        flags[6] = A == 0;
+        break; // !!!!!!!!!!!!!!!!!!!!!!!!!! make a function for the addressing modes
+        flags[NEGATIVE_f] = (A >> 7);  // TODO: replace with a function
+        flags[ZERO_f] = (A == 0);
         pc += 2;
         break;
     case 0x02: break;
@@ -44,7 +43,13 @@ void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     case 0x0d: break;
     case 0x0e: break;
     case 0x0f: break;
-    case 0x10: break;
+    case 0x10:  // BPL
+        if (!flags[NEGATIVE_f]) {
+            pc += static_cast<signed char>(mem.Read(pc + 1));
+            break;
+        }
+        pc += 2;
+        break;
     case 0x11: break;
     case 0x12: break;
     case 0x13: break;
@@ -60,7 +65,11 @@ void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     case 0x1d: break;
     case 0x1e: break;
     case 0x1f: break;
-    case 0x20: break;
+    case 0x20:  // JSR
+        Push((pc + 3) >> 8, mem);  // MAYBE + 2 ????
+        Push((pc + 3) & 0xFF, mem);  // MAYBE the other way around???
+        pc = (mem.Read(pc + 2) << 8) | mem.Read(pc + 1);  // THIS SHOULD BE IN ROM MEMORY NOT THE WHOLE CPU
+        break;
     case 0x21: break;
     case 0x22: break;
     case 0x23: break;
@@ -148,7 +157,10 @@ void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     case 0x75: break;
     case 0x76: break;
     case 0x77: break;
-    case 0x78: break;
+    case 0x78:  // SEI
+        flags[INTERRUPT_f] = false;
+        pc += 1;
+        break;
     case 0x79: break;
     case 0x7a: break;
     case 0x7b: break;
@@ -201,7 +213,10 @@ void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     case 0xaa: break;
     case 0xab: break;
     case 0xac: break;
-    case 0xad: break;
+    case 0xad:  // LDA (abs)
+        A = mem.Read((mem.Read(pc + 2) << 8) | mem.Read(pc + 1));
+        pc += 3;
+        break;
     case 0xae: break;
     case 0xaf: break;
     case 0xb0: break;
@@ -245,7 +260,7 @@ void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     case 0xd6: break;
     case 0xd7: break;
     case 0xd8:  // CLD
-        flags[1] = 0;
+        flags[DECIMAL_f] = false;
         pc += 1;
         break;
     case 0xd9: break;
@@ -290,4 +305,5 @@ void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     }
 
     // TODO: print registers
+    // TODO: add cycle counter
 }

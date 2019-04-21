@@ -10,22 +10,36 @@
 constexpr int MASTER_CLOCKSPEED = 21477272;  // NTSC clockspeed
 constexpr int CPU_CLOCKSPEED = MASTER_CLOCKSPEED / 12;
 
-constexpr uint8_t NEGATIVE_f = 7;
-constexpr uint8_t OVERFLOW_f = 6;
-constexpr uint8_t BREAKPOINT_f = 4;
-constexpr uint8_t DECIMAL_f = 3;
-constexpr uint8_t INTERRUPT_f = 2;
-constexpr uint8_t ZERO_f = 1;
-constexpr uint8_t CARRY_f = 0;
+enum Flags {
+    carry = 0, zero, interrupt,
+    decimal, breakpoint, padding,
+    overflow, negative
+};
+
+enum class Addressing {
+    ind = 0,
+    ind_X,
+    ind_Y,
+
+    // TODO: remove these later
+    rel,
+    zpg,
+    zpg_X,
+    zpg_Y
+};
 
 class Cpu {
 public:
-    void ExecuteCycles(const uint32_t cycles, Memory& mem);
+    Cpu(Memory& mem);
+    void ExecuteCycles(const uint32_t cycles);
 
 private:
-    void Interpreter(const uint8_t instr, Memory& mem);
-    void Push(const uint8_t byte, Memory& mem);
-    uint8_t Pop(Memory& mem);
+    Memory* memory;
+
+    void Interpreter(const uint8_t instr);
+    uint16_t GetComplexAddress(enum class Addressing mode, const uint16_t val);
+    void Push(const uint8_t byte);
+    uint8_t Pop();
 
     uint8_t A = 0x00, X = 0x00, Y = 0x00;
     uint8_t sp = 0xFF;

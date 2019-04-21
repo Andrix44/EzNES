@@ -42,7 +42,7 @@ private:
     bool prg_ram_battery = false;
     bool trainer = false;
     enum Mirroring {
-        horizontal,
+        horizontal = 0,
         vertical
     } mirroring;
     uint16_t mapper = NULL;
@@ -50,13 +50,13 @@ private:
     uint32_t prg_ram_size = NULL, eeprom_size = NULL;
     uint32_t chr_ram_size = NULL, chr_nvram_size = NULL;
     enum ConsoleType {
-        nes_famicom,
+        nes_famicom = 0,
         vs_system,
         playchoice,
         extended
     } console_type;
     enum Region {
-        ntsc,
+        ntsc = 0,
         pal,
         multi,
         dendy

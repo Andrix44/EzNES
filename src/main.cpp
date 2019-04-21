@@ -18,9 +18,9 @@ int main(int argc, char* argv[]){
     }
     */
 
-    Cpu cpu;
-    //Ppu ppu;
     Memory mem;
+    Cpu cpu(mem);
+    //Ppu ppu;
 
     if (!argv[1]) {  // TODO: this freezes glfw, maybe move it somewhere else
         printf("Please enter the ROM path as an argument.\n");
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]){
     }
 
     while (true) {  // Trying to get the cpu running
-        cpu.ExecuteCycles(10, mem);
+        cpu.ExecuteCycles(10);
     }
 
     /*

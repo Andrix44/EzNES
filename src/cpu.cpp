@@ -1,32 +1,64 @@
 #include "cpu.h"
 
 
-void Cpu::ExecuteCycles(const uint32_t cycles, Memory& mem) {
+Cpu::Cpu(Memory& mem) {
+    memory = &mem;
+}
+
+void Cpu::ExecuteCycles(const uint32_t cycles) {
     for (uint32_t i = 0; i <= cycles; i++) {
-        instr = mem.Read(pc);
-        Interpreter(instr, mem);
+        instr = memory->Read(pc);
+        Interpreter(instr);
     }
 }
 
-void Cpu::Push(const uint8_t byte, Memory& mem) {
-    mem.Write(sp + 0x100, byte);
+uint16_t Cpu::GetComplexAddress(enum class Addressing mode, const uint16_t val) {
+    switch (mode) {
+    case Addressing::ind:
+        assert(val < 256);
+        return (memory->Read((val + 1) % 65536) << 8) | memory->Read(val);
+    case Addressing::ind_X:
+        assert(val < 256);
+        return (memory->Read((val + X + 1) % 256) << 8) | memory->Read((val + X) % 256);
+    case Addressing::ind_Y:
+        assert(val < 256);
+        return ((memory->Read((val + 1) % 256) << 8) | memory->Read(val)) + Y;
+
+    // TODO: remove these later, use them only as a template
+    case Addressing::rel:
+        assert(val < 256);
+        return pc + static_cast<int8_t>(val);
+    case Addressing::zpg:
+        assert(val < 256);
+        return val;
+    case Addressing::zpg_X:
+        assert(val < 256);
+        return (val + X) % 256;
+    case Addressing::zpg_Y:
+        assert(val < 256);
+        return (val + Y) % 256;
+    }
+}
+
+void Cpu::Push(const uint8_t byte) {
+    memory->Write(sp + 0x100, byte);
     --sp;
 }
 
-uint8_t Cpu::Pop(Memory& mem) {
-    uint8_t temp = mem.Read(sp + 0x100);
+uint8_t Cpu::Pop() {
+    uint8_t temp = memory->Read(sp + 0x100);
     ++sp;
     return temp;
 }
 
-void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
+void Cpu::Interpreter(const uint8_t instr) {
     printf("%X\n", instr);
     switch (instr) {
     case 0x00: break;
     case 0x01:  // ORA (ind, X)
-        break; // !!!!!!!!!!!!!!!!!!!!!!!!!! make a function for the addressing modes
-        flags[NEGATIVE_f] = (A >> 7);  // TODO: replace with a function
-        flags[ZERO_f] = (A == 0);
+        A = A | memory->Read(GetComplexAddress(Addressing::ind_X, memory->Read(pc + 1)));
+        flags[Flags::negative] = (A >> 7);
+        flags[Flags::zero] = (A == 0);
         pc += 2;
         break;
     case 0x02: break;
@@ -44,8 +76,8 @@ void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     case 0x0e: break;
     case 0x0f: break;
     case 0x10:  // BPL
-        if (!flags[NEGATIVE_f]) {
-            pc += static_cast<signed char>(mem.Read(pc + 1));
+        if (!flags[Flags::negative]) {
+            pc += static_cast<signed char>(memory->Read(pc + 1));
             break;
         }
         pc += 2;
@@ -66,9 +98,9 @@ void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     case 0x1e: break;
     case 0x1f: break;
     case 0x20:  // JSR
-        Push((pc + 3) >> 8, mem);  // MAYBE + 2 ????
-        Push((pc + 3) & 0xFF, mem);  // MAYBE the other way around???
-        pc = (mem.Read(pc + 2) << 8) | mem.Read(pc + 1);  // THIS SHOULD BE IN ROM MEMORY NOT THE WHOLE CPU
+        Push((pc + 3) >> 8);  // MAYBE + 2 ????
+        Push((pc + 3) & 0xFF);  // MAYBE the other way around???
+        pc = (memory->Read(pc + 2) << 8) | memory->Read(pc + 1);  // TODO: THIS SHOULD BE IN ROM MEMORY NOT THE WHOLE CPU
         break;
     case 0x21: break;
     case 0x22: break;
@@ -158,7 +190,7 @@ void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     case 0x76: break;
     case 0x77: break;
     case 0x78:  // SEI
-        flags[INTERRUPT_f] = false;
+        flags[Flags::interrupt] = false;
         pc += 1;
         break;
     case 0x79: break;
@@ -214,7 +246,7 @@ void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     case 0xab: break;
     case 0xac: break;
     case 0xad:  // LDA (abs)
-        A = mem.Read((mem.Read(pc + 2) << 8) | mem.Read(pc + 1));
+        A = memory->Read((memory->Read(pc + 2) << 8) | memory->Read(pc + 1));
         pc += 3;
         break;
     case 0xae: break;
@@ -260,7 +292,7 @@ void Cpu::Interpreter(const uint8_t instr, Memory& mem) {
     case 0xd6: break;
     case 0xd7: break;
     case 0xd8:  // CLD
-        flags[DECIMAL_f] = false;
+        flags[Flags::decimal] = false;
         pc += 1;
         break;
     case 0xd9: break;

@@ -31,7 +31,7 @@ bool Memory::LoadROM(const char* location) {
 }
 
 bool Memory::ReadHeader() {
-    fread(&header[0], 1, 16, input_ROM);
+    fread(&header[0], 1, HEADER_SIZE, input_ROM);
 
     if (header[0] == (int)"N"[0] && header[1] == (int)"E"[0] && header[2] == (int)"S"[0] && header[3] == 0x1A) {
         printf("Compatible format detected!\n");
@@ -50,8 +50,8 @@ bool Memory::ReadHeader() {
         NES_ver_2 = false;
     }
     if (!NES_ver_2) {  // iNES header
-        prg_rom_size = (header[4]) * 16384;
-        chr_rom_size = (header[5]) * 8192;  // 0 means that CHR RAM is being used
+        prg_rom_size = (header[4]) * 0x4000;
+        chr_rom_size = (header[5]) * 0x2000;  // 0 means that CHR RAM is being used
         mirroring = (header[6] & 0x1) ? vertical : horizontal;
         prg_ram_battery = header[6] & 0x2;
         trainer = header[6] & 0x4;
@@ -95,7 +95,7 @@ bool Memory::ReadHeader() {
         /*
         uint8_t prg_nibble = header[9] & 0x0F;
         if (prg_nibble <= 0xE) {
-            prg_rom_size = ((prg_nibble << 8) | header[4]) * 16384;
+            prg_rom_size = ((prg_nibble << 8) | header[4]) * 0x4000;
         }
         else {
             prg_rom_size = (2 << (header[4] >> 2)) * (((header[4] & 0x3) * 2) + 1);  // (2 ^ exponent) * ((multiplier * 2) + 1) bytes
@@ -103,7 +103,7 @@ bool Memory::ReadHeader() {
 
         uint8_t chr_nibble = header[9] >> 4;
         if (chr_nibble <= 0xE) {
-            chr_rom_size = ((chr_nibble << 8) | header[5]) * 8192;
+            chr_rom_size = ((chr_nibble << 8) | header[5]) * 0x2000;
         }
         else {
             chr_rom_size = (2 << (header[5] >> 2)) * (((header[5] & 0x3) * 2) + 1);  // (2 ^ exponent) * ((multiplier * 2) + 1) bytes
@@ -149,23 +149,26 @@ bool Memory::SetupMapper() {
 }
 
 uint8_t Memory::Read(const uint16_t addr) {
-    printf("Read at %X \n", addr);
+    uint8_t ret = NULL;
 
     if (addr <= 0x1FFF) {
-        return cpu_memory[addr];
+        ret = cpu_memory[addr];
     }
 
     else if (addr >= 0x2000 && addr <= 0x3FFF) {
-        return cpu_memory[(addr & 0x7) + 0x2000];
+        ret = cpu_memory[(addr & 0x7) + 0x2000];
     }
 
     else {
-        return cpu_memory[curr_mapper->TranslateAddress(addr)];
+        ret = cpu_memory[curr_mapper->TranslateAddress(addr)];
     }
+
+    printf("Read at 0x%X, value = 0x%X \n", addr, ret);
+    return ret;
 }
 
 void Memory::Write(const uint16_t addr, const uint8_t byte) {
-    printf("Write at %X \n", addr);
+    printf("Write at 0x%X, value = 0x%X \n", addr, byte);
 
     if (addr <= 0x1FFF) {
         cpu_memory[addr] = byte;

@@ -38,12 +38,16 @@ private:
 
     void Interpreter(const uint8_t instr);
     uint16_t GetComplexAddress(enum class Addressing mode, const uint16_t val);
+    inline uint16_t GetImmediateAddress();
     void Push(const uint8_t byte);
     uint8_t Pop();
+    void ShiftLeftWithFlags(const uint16_t addr);
+    void ShiftRightWithFlags(const uint16_t addr);
+    void CompareWithMemory(const uint8_t byte, const uint16_t addr);
 
     uint8_t A = 0x00, X = 0x00, Y = 0x00;
     uint8_t sp = 0xFF;
-    uint16_t pc = 0x8000;  // TODO: make this mapper-dependant !!!!!!!!!!!!!!
+    uint16_t pc = 0x0000;  // TODO: make this mapper-dependant !!!!!!!!!!!!!!
     std::bitset<8> flags = 0b00100000;
  /*                 negative-|| |||||
                     overflow--| |||||

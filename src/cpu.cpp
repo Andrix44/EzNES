@@ -3,10 +3,12 @@
 
 Cpu::Cpu(Memory& mem) {
     memory = &mem;
+    pc = (memory->Read(0xFFFD) << 8) | memory->Read(0xFFFC);  // TODO: this is just a hack for the reset vector, implement it properly later
 }
 
 void Cpu::ExecuteCycles(const uint32_t cycles) {
     for (uint32_t i = 0; i <= cycles; i++) {
+        printf("-------------------------------------\n");
         instr = memory->Read(pc);
         Interpreter(instr);
     }
@@ -37,7 +39,14 @@ uint16_t Cpu::GetComplexAddress(enum class Addressing mode, const uint16_t val) 
     case Addressing::zpg_Y:
         assert(val < 256);
         return (val + Y) % 256;
+    default:
+        printf("It should be impossible for this text to appear!\n");
+        return 0xFFFF;
     }
+}
+
+inline uint16_t Cpu::GetImmediateAddress() {
+    return (memory->Read(pc + 2) << 8) | memory->Read(pc + 1);
 }
 
 void Cpu::Push(const uint8_t byte) {
@@ -51,16 +60,40 @@ uint8_t Cpu::Pop() {
     return temp;
 }
 
-void Cpu::Interpreter(const uint8_t instr) {
-    printf("%X\n", instr);
+void Cpu::ShiftLeftWithFlags(const uint16_t addr) {
+    return;  // TODO
+}
+
+void Cpu::ShiftRightWithFlags(const uint16_t addr) {
+    uint8_t byte = memory->Read(addr);
+    flags[Flags::carry] = (byte & 0x1);
+    byte >>= 1;
+    flags[Flags::zero] = (byte == 0);
+    memory->Write(addr, byte);
+}
+
+void Cpu::CompareWithMemory(const uint8_t byte, const uint16_t addr) {
+    uint8_t val = memory->Read(addr);
+    uint8_t result = byte - val;
+    flags[Flags::negative] = (result >> 7);
+    flags[Flags::zero] = (result == 0);
+    flags[Flags::carry] = (byte < val);
+}
+
+void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope that the compiler optimizes this into a jumptable
+    printf("-------------------------------------\n"
+           "A = 0x%X  X = 0x%X  Y = 0x%X\n"
+           "SP = 0x%X  PC = 0x%X  instr = 0x%X\n", A, X, Y, sp + 0x100, pc, instr);  // TODO: add flags
+
     switch (instr) {
     case 0x00: break;
-    case 0x01:  // ORA (ind, X)
+    case 0x01: {  // ORA (ind, X)
         A = A | memory->Read(GetComplexAddress(Addressing::ind_X, memory->Read(pc + 1)));
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;
         break;
+    }
     case 0x02: break;
     case 0x03: break;
     case 0x04: break;
@@ -75,13 +108,14 @@ void Cpu::Interpreter(const uint8_t instr) {
     case 0x0d: break;
     case 0x0e: break;
     case 0x0f: break;
-    case 0x10:  // BPL
+    case 0x10: {  // BPL
         if (!flags[Flags::negative]) {
             pc += static_cast<signed char>(memory->Read(pc + 1));
             break;
         }
         pc += 2;
         break;
+    }
     case 0x11: break;
     case 0x12: break;
     case 0x13: break;
@@ -97,11 +131,12 @@ void Cpu::Interpreter(const uint8_t instr) {
     case 0x1d: break;
     case 0x1e: break;
     case 0x1f: break;
-    case 0x20:  // JSR
+    case 0x20: {  // JSR
         Push((pc + 3) >> 8);  // MAYBE + 2 ????
         Push((pc + 3) & 0xFF);  // MAYBE the other way around???
-        pc = (memory->Read(pc + 2) << 8) | memory->Read(pc + 1);  // TODO: THIS SHOULD BE IN ROM MEMORY NOT THE WHOLE CPU
+        pc = GetImmediateAddress();
         break;
+    }
     case 0x21: break;
     case 0x22: break;
     case 0x23: break;
@@ -139,7 +174,12 @@ void Cpu::Interpreter(const uint8_t instr) {
     case 0x43: break;
     case 0x44: break;
     case 0x45: break;
-    case 0x46: break;
+    case 0x46: {  // LSR (zpg)
+        uint16_t addr = memory->Read(pc + 1);
+        ShiftRightWithFlags(addr);
+        pc += 2;
+        break;
+    }
     case 0x47: break;
     case 0x48: break;
     case 0x49: break;
@@ -189,10 +229,11 @@ void Cpu::Interpreter(const uint8_t instr) {
     case 0x75: break;
     case 0x76: break;
     case 0x77: break;
-    case 0x78:  // SEI
+    case 0x78: {  // SEI
         flags[Flags::interrupt] = false;
         pc += 1;
         break;
+    }
     case 0x79: break;
     case 0x7a: break;
     case 0x7b: break;
@@ -213,7 +254,11 @@ void Cpu::Interpreter(const uint8_t instr) {
     case 0x8a: break;
     case 0x8b: break;
     case 0x8c: break;
-    case 0x8d: break;
+    case 0x8d: {  // STA (abs)
+        memory->Write(GetImmediateAddress(), A);
+        pc += 2;
+        break;
+    }
     case 0x8e: break;
     case 0x8f: break;
     case 0x90: break;
@@ -221,12 +266,20 @@ void Cpu::Interpreter(const uint8_t instr) {
     case 0x92: break;
     case 0x93: break;
     case 0x94: break;
-    case 0x95: break;
+    case 0x95: {  // STA (zpg, X)
+        memory->Write((memory->Read(pc + 1) + X) % 256, A);
+        pc += 2;
+        break;
+    }
     case 0x96: break;
     case 0x97: break;
     case 0x98: break;
     case 0x99: break;
-    case 0x9a: break;
+    case 0x9a: {  // TXS
+        sp = X;
+        pc += 1;
+        break;
+    }
     case 0x9b: break;
     case 0x9c: break;
     case 0x9d: break;
@@ -241,14 +294,21 @@ void Cpu::Interpreter(const uint8_t instr) {
     case 0xa6: break;
     case 0xa7: break;
     case 0xa8: break;
-    case 0xa9: break;
+    case 0xa9: {  // LDA (imm)
+        A = memory->Read(pc + 1);
+        flags[Flags::negative] = (A >> 7);
+        flags[Flags::zero] = (A == 0);
+        pc += 2;
+        break;
+    }
     case 0xaa: break;
     case 0xab: break;
     case 0xac: break;
-    case 0xad:  // LDA (abs)
-        A = memory->Read((memory->Read(pc + 2) << 8) | memory->Read(pc + 1));
+    case 0xad: {  // LDA (abs)
+        A = memory->Read(GetImmediateAddress());
         pc += 3;
         break;
+    }
     case 0xae: break;
     case 0xaf: break;
     case 0xb0: break;
@@ -276,7 +336,11 @@ void Cpu::Interpreter(const uint8_t instr) {
     case 0xc6: break;
     case 0xc7: break;
     case 0xc8: break;
-    case 0xc9: break;
+    case 0xc9: {  // CMP (imm)
+        CompareWithMemory(A, pc + 1);
+        pc += 2;
+        break;
+    }
     case 0xca: break;
     case 0xcb: break;
     case 0xcc: break;
@@ -291,10 +355,11 @@ void Cpu::Interpreter(const uint8_t instr) {
     case 0xd5: break;
     case 0xd6: break;
     case 0xd7: break;
-    case 0xd8:  // CLD
+    case 0xd8: {  // CLD
         flags[Flags::decimal] = false;
         pc += 1;
         break;
+    }
     case 0xd9: break;
     case 0xda: break;
     case 0xdb: break;
@@ -336,6 +401,5 @@ void Cpu::Interpreter(const uint8_t instr) {
     case 0xff: break;
     }
 
-    // TODO: print registers
     // TODO: add cycle counter
 }

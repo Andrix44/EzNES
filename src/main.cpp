@@ -19,7 +19,6 @@ int main(int argc, char* argv[]){
     */
 
     Memory mem;
-    Cpu cpu(mem);
     //Ppu ppu;
 
     if (!argv[1]) {  // TODO: this freezes glfw, maybe move it somewhere else
@@ -36,6 +35,8 @@ int main(int argc, char* argv[]){
     if (mem.SetupMapper()) {
         printf("An error occured during mapper setup, mapper probably unsupported!\n");
     }
+
+    Cpu cpu(mem);
 
     while (true) {  // Trying to get the cpu running
         cpu.ExecuteCycles(10);

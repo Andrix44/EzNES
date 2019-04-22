@@ -8,7 +8,7 @@
 #include <mappers/nrom.h>
 
 
-constexpr uint8_t HEADER_SIZE = 16;
+constexpr uint8_t HEADER_SIZE = 0x10;
 constexpr uint32_t CPU_MEMORY_SIZE = 0x10000;
 constexpr uint16_t PPU_MEMORY_SIZE = 0x4000;
 

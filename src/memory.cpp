@@ -152,11 +152,11 @@ uint8_t Memory::Read(const uint16_t addr) {
     uint8_t ret = NULL;
 
     if (addr <= 0x1FFF) {
-        ret = cpu_memory[addr];
+        ret = cpu_memory[addr & 0x7FF];
     }
 
     else if (addr >= 0x2000 && addr <= 0x3FFF) {
-        ret = cpu_memory[(addr & 0x7) + 0x2000];
+        ret = cpu_memory[(addr & 0x7) + 0x2000LL];
     }
 
     else {
@@ -175,7 +175,7 @@ void Memory::Write(const uint16_t addr, const uint8_t byte) {
     }
 
     else if (addr >= 0x2000 && addr <= 0x3FFF) {
-        cpu_memory[(addr & 0x7) + 0x2000] = byte;
+        cpu_memory[(addr & 0x7) + 0x2000LL] = byte;
     }
 
     else {

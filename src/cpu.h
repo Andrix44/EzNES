@@ -47,7 +47,7 @@ private:
 
     uint8_t A = 0x00, X = 0x00, Y = 0x00;
     uint8_t sp = 0xFF;
-    uint16_t pc = 0x0000;  // TODO: make this mapper-dependant !!!!!!!!!!!!!!
+    uint16_t pc = 0x0000;
     std::bitset<8> flags = 0b00100000;
  /*                 negative-|| |||||
                     overflow--| |||||

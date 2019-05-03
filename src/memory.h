@@ -44,7 +44,7 @@ private:
     enum Mirroring {
         horizontal = 0,
         vertical
-    } mirroring;
+    } mirroring{};
     uint16_t mapper = NULL;
     uint8_t submapper = NULL;
     uint32_t prg_ram_size = NULL, eeprom_size = NULL;
@@ -54,12 +54,12 @@ private:
         vs_system,
         playchoice,
         extended
-    } console_type;
+    } console_type{};
     enum Region {
         ntsc = 0,
         pal,
         multi,
         dendy
-    } region;
+    } region{};
     uint8_t wip0 = NULL, wip1 = NULL, wip2 = NULL;
 };

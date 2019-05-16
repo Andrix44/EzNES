@@ -1,6 +1,5 @@
 #include "cpu.h"
 
-#include <iostream>  // Only until all instructions are implemented
 
 Cpu::Cpu(Memory& mem) {
     memory = &mem;
@@ -516,7 +515,6 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
 
     if (pc == pc_start) {
         printf("\nUnimplemented instruction 0x%X\n", memory->Read(pc));
-        std::cin.get();
     }
     // TODO: add cycle counter
 }

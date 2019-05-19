@@ -7,7 +7,7 @@ Cpu::Cpu(Memory& mem) {
 }
 
 void Cpu::ExecuteCycles(const uint32_t cycles) {
-    for (uint32_t i = 0; i <= cycles; i++) {
+    for (uint32_t i = 0; i < cycles; i++) {
         printf("-------------------------------------\n");
         instr = memory->Read(pc);
         Interpreter(instr);

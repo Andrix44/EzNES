@@ -72,7 +72,7 @@ int main(int argc, char* argv[]){
     bool show_debug_window = true;
 
     while (!glfwWindowShouldClose(window)) {
-        cpu.ExecuteCycles(1);
+        //cpu.ExecuteCycles(1);
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -84,6 +84,15 @@ int main(int argc, char* argv[]){
         ImGui::Begin("Main window");
         ImGui::Checkbox("Show debug window", &show_debug_window);
         ImGui::Checkbox("Show demo window", &show_demo_window);
+        if (ImGui::Button("Step")) {
+            cpu.ExecuteCycles(1);
+        }
+        if (ImGui::Button("Step * 10")) {
+            cpu.ExecuteCycles(10);
+        }
+        if (ImGui::Button("Step * 100")) {
+            cpu.ExecuteCycles(100);
+        }
         ImGui::End();
 
         if (show_debug_window) {
@@ -113,6 +122,9 @@ int main(int argc, char* argv[]){
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     glfwDestroyWindow(window);
     glfwTerminate();

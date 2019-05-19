@@ -96,7 +96,7 @@ void Cpu::CompareWithMemory(const uint8_t byte, const uint16_t addr) {
 void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope that the compiler optimizes this into a jumptable
     printf("-------------------------------------\n"
            "A = 0x%X  X = 0x%X  Y = 0x%X\n"
-           "SP = 0x%X  PC = 0x%X  instr = 0x%X\n", A, X, Y, sp + 0x100, pc, instr);  // TODO: add flags
+           "SP = 0x%X  PC = 0x%X  next instr = 0x%X\n", A, X, Y, sp + 0x100, pc, instr);
 
     uint16_t pc_start = pc;
     switch (instr) {
@@ -322,7 +322,11 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 3;
         break;
     }
-    case 0x8e: break;
+    case 0x8e: {  // STX (abs) --
+        memory->Write(GetImmediateAddress(), X);
+        pc += 3;
+        break;
+    }
     case 0x8f: break;
     case 0x90: break;
     case 0x91: {  // BCC --
@@ -439,6 +443,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         X -= 1;
         flags[Flags::negative] = (X >> 7);
         flags[Flags::zero] = (X == 0);
+        pc += 1;
         break;
     }
     case 0xcb: break;
@@ -446,7 +451,14 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0xcd: break;
     case 0xce: break;
     case 0xcf: break;
-    case 0xd0: break;
+    case 0xd0: {  // BNE --
+        if (!flags[Flags::zero]) {
+            pc += static_cast<int8_t>(memory->Read(pc + 1));
+            break;
+        }
+        pc += 2;
+        break;
+    }
     case 0xd1: break;
     case 0xd2: break;
     case 0xd3: break;
@@ -482,7 +494,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0xe9: break;
-    case 0xea: break;
+    case 0xea: {  // NOP --
+        pc += 1;
+        break;
+    }
     case 0xeb: break;
     case 0xec: break;
     case 0xed: break;

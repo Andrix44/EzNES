@@ -67,6 +67,7 @@ int main(int argc, char* argv[]){
     }
 
     Cpu cpu(mem);
+    cpu.memory->Write(0x2002, (1 << 7));  // TODO: VBLANK HACK
 
     bool show_demo_window = false;
     bool show_debug_window = true;

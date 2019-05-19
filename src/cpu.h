@@ -33,6 +33,8 @@ public:
     Cpu(Memory& mem);
     void ExecuteCycles(const uint32_t cycles);
 
+    Memory* memory;
+
     uint8_t A = 0x00, X = 0x00, Y = 0x00;
     uint8_t sp = 0xFD;
     uint16_t pc = 0x0000;
@@ -47,8 +49,6 @@ public:
                           carry--------|*/
 
 private:
-    Memory* memory;
-
     void Interpreter(const uint8_t instr);
     uint16_t GetComplexAddress(enum class Addressing mode, const uint16_t val);
     inline uint16_t GetImmediateAddress();

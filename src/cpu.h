@@ -33,6 +33,19 @@ public:
     Cpu(Memory& mem);
     void ExecuteCycles(const uint32_t cycles);
 
+    uint8_t A = 0x00, X = 0x00, Y = 0x00;
+    uint8_t sp = 0xFD;
+    uint16_t pc = 0x0000;
+    std::bitset<8> flags = 0b00100000;
+    /*                 negative-|| |||||
+                       overflow--| |||||
+                                   |||||
+                     breakpoint----|||||
+                  BCD(disabled)-----||||
+                      interrupt------||| TODO: Maybe 1 on init?
+                           zero-------||
+                          carry--------|*/
+
 private:
     Memory* memory;
 
@@ -44,19 +57,6 @@ private:
     void ShiftLeftWithFlags(const uint16_t addr);
     void ShiftRightWithFlags(const uint16_t addr);
     void CompareWithMemory(const uint8_t byte, const uint16_t addr);
-
-    uint8_t A = 0x00, X = 0x00, Y = 0x00;
-    uint8_t sp = 0xFD;
-    uint16_t pc = 0x0000;
-    std::bitset<8> flags = 0b00100000;
- /*                 negative-|| |||||
-                    overflow--| |||||
-                                |||||
-                  breakpoint----|||||
-               BCD(disabled)-----||||
-                   interrupt------||| TODO: Maybe 1 on init?
-                        zero-------||
-                       carry--------|*/
 
     uint8_t instr = NULL;
 };

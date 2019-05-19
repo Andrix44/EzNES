@@ -1,5 +1,9 @@
 #include <stdio.h>
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
+
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 
@@ -7,8 +11,6 @@
 #include "memory.h"
 //#include "ppu.h"
 
-
-bool SetupWindow(GLFWwindow* window);
 
 int main(int argc, char* argv[]){
     if (!glfwInit()) {
@@ -20,8 +22,10 @@ int main(int argc, char* argv[]){
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-    GLFWwindow* window = NULL;
-    window = glfwCreateWindow(256 * 2, 240 * 2, "EzNES", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "EzNES", NULL, NULL);
+    if (window == NULL) {
+        return 1;
+    }
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);  // VSync
 
@@ -33,6 +37,15 @@ int main(int argc, char* argv[]){
         printf("Error while initialising glad!\n");
         return 1;
     }
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Keyboard
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Maybe later
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
 
     Memory mem;
     //Ppu ppu;
@@ -50,13 +63,43 @@ int main(int argc, char* argv[]){
 
     if (mem.SetupMapper()) {
         printf("An error occured during mapper setup, mapper probably unsupported!\n");
+        return 1;
     }
 
     Cpu cpu(mem);
 
+    bool show_demo_window = false;
+    bool show_debug_window = true;
 
     while (!glfwWindowShouldClose(window)) {
         cpu.ExecuteCycles(1);
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        if (show_demo_window) {
+            ImGui::ShowDemoWindow(&show_demo_window);
+        }
+
+        ImGui::Begin("Main window");
+        ImGui::Checkbox("Show debug window", &show_debug_window);
+        ImGui::Checkbox("Show demo window", &show_demo_window);
+        ImGui::End();
+
+        if (show_debug_window) {
+            ImGui::Begin("Debug", &show_debug_window);
+            ImGui::Text("Registers: \n"
+                "A = 0x%X \n"
+                "X = 0x%X \n"
+                "Y = 0x%X \n"
+                "PC = 0x%X \n"
+                "SP = 0x%X \n"
+                , cpu.A, cpu.X, cpu.Y, cpu.pc, cpu.sp + 0x100);  // TODO: add flags
+            ImGui::Text("\nApplication average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::End();
+        }
+        
+        ImGui::Render();
 
         int display_w, display_h;
         glfwMakeContextCurrent(window);
@@ -64,6 +107,8 @@ int main(int argc, char* argv[]){
         glViewport(0, 0, display_w, display_h);
         glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
         glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         glfwMakeContextCurrent(window);
         glfwSwapBuffers(window);
         glfwPollEvents();

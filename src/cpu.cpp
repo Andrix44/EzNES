@@ -96,7 +96,7 @@ void Cpu::CompareWithMemory(const uint8_t byte, const uint16_t addr) {
 void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope that the compiler optimizes this into a jumptable
     printf("-------------------------------------\n"
            "A = 0x%X  X = 0x%X  Y = 0x%X\n"
-           "SP = 0x%X  PC = 0x%X  next instr = 0x%X\n", A, X, Y, sp + 0x100, pc, instr);
+           "SP = 0x%X  PC = 0x%X  instr being executed = 0x%X\n", A, X, Y, sp + 0x100, pc, instr);
 
     uint16_t pc_start = pc;
     switch (instr) {

@@ -163,12 +163,12 @@ uint8_t Memory::Read(const uint16_t addr) {
         ret = cpu_memory[curr_mapper->TranslateAddress(addr)];
     }
 
-    printf("Read at 0x%X, value = 0x%X \n", addr, ret);
+    // printf("Read at 0x%X, value = 0x%X \n", addr, ret);
     return ret;
 }
 
 void Memory::Write(const uint16_t addr, const uint8_t byte) {
-    printf("Write at 0x%X, value = 0x%X \n", addr, byte);
+    // printf("Write at 0x%X, value = 0x%X \n", addr, byte);
 
     if (addr <= 0x1FFF) {
         cpu_memory[addr] = byte;

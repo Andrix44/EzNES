@@ -160,6 +160,7 @@
     <ClInclude Include="include\imgui\imstb_textedit.h" />
     <ClInclude Include="include\imgui\imstb_truetype.h" />
     <ClInclude Include="include\KHR\khrplatform.h" />
+    <ClInclude Include="include\portable-file-dialogs\portable-file-dialogs.h" />
     <ClInclude Include="src\cpu.h" />
     <ClInclude Include="src\mappers\mapper.h" />
     <ClInclude Include="src\mappers\nrom.h" />

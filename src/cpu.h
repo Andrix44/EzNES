@@ -30,8 +30,8 @@ enum class Addressing {
 
 class Cpu {
 public:
-    Cpu(Memory& mem);
     void ExecuteCycles(const uint32_t cycles);
+    void LinkWithMemory(Memory& mem);
 
     Memory* memory;
 

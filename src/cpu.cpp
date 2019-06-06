@@ -1,17 +1,17 @@
 #include "cpu.h"
 
 
-Cpu::Cpu(Memory& mem) {
-    memory = &mem;
-    pc = (memory->Read(0xFFFD) << 8) | memory->Read(0xFFFC);  // TODO: this is just a hack for the reset vector, implement it properly later
-}
-
 void Cpu::ExecuteCycles(const uint32_t cycles) {
     for (uint32_t i = 0; i < cycles; i++) {
-        printf("-------------------------------------\n");
+        // printf("-------------------------------------\n");
         instr = memory->Read(pc);
         Interpreter(instr);
     }
+}
+
+void Cpu::LinkWithMemory(Memory& mem) {
+    memory = &mem;
+    pc = (memory->Read(0xFFFD) << 8) | memory->Read(0xFFFC);  // TODO: this is just a hack for the reset vector, implement it properly later
 }
 
 uint16_t Cpu::GetComplexAddress(enum class Addressing mode, const uint16_t val) {
@@ -74,13 +74,13 @@ void Cpu::ShiftLeftWithFlags(const uint16_t addr) {
 
 void Cpu::ShiftRightWithFlags(const uint16_t addr) {
     uint8_t byte = memory->Read(addr);
-    printf("Before left shift: Carry = %X, Zero = %X, Byte = 0x%X\n",
+    printf("Before right shift: Carry = %X, Zero = %X, Byte = 0x%X\n",
             flags[Flags::carry], flags[Flags::zero], byte);
     flags[Flags::carry] = (byte & 0x1);
     byte >>= 1;
     flags[Flags::zero] = (byte == 0);
     memory->Write(addr, byte);
-    printf("After left shift: Carry = %X, Zero = %X, Byte = 0x%X\n",
+    printf("After right shift: Carry = %X, Zero = %X, Byte = 0x%X\n",
             flags[Flags::carry], flags[Flags::zero], byte);
 }
 
@@ -93,6 +93,7 @@ void Cpu::CompareWithMemory(const uint8_t byte, const uint16_t addr) {
 }
 
 void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope that the compiler optimizes this into a jumptable
+    printf("-------------------------------------\n"
            "A = 0x%X  X = 0x%X  Y = 0x%X\n"
            "SP = 0x%X  PC = 0x%X  instr being executed = 0x%X\n", A, X, Y, sp + 0x100, pc, instr);
 

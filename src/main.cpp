@@ -7,6 +7,8 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 
+#include "portable-file-dialogs/portable-file-dialogs.h"
+
 #include "cpu.h"
 #include "memory.h"
 //#include "ppu.h"
@@ -49,26 +51,9 @@ int main(int argc, char* argv[]){
 
     Memory mem;
     //Ppu ppu;
+    Cpu cpu;
 
-    if (!argv[1]) {  // TODO: this freezes glfw, maybe move it somewhere else
-        printf("Please enter the ROM path as an argument.\n");
-        system("pause");
-        return 1;
-    }
-    if (mem.LoadROM(argv[1])) {
-        printf("An error occured during the ROM loading, stopping emulation!\n");
-        system("pause");
-        return 1;
-    }
-
-    if (mem.SetupMapper()) {
-        printf("An error occured during mapper setup, mapper probably unsupported!\n");
-        return 1;
-    }
-
-    Cpu cpu(mem);
-    cpu.memory->Write(0x2002, (1 << 7));  // TODO: VBLANK HACK
-
+    bool rom_already_opened = false;
     bool show_demo_window = false;
     bool show_debug_window = true;
 
@@ -83,6 +68,23 @@ int main(int argc, char* argv[]){
         }
 
         ImGui::Begin("Main window");
+        if (ImGui::Button("Load ROM")) {
+            if (!rom_already_opened) {
+                std::string rom = pfd::open_file("Select a file", ".", { "NES ROMS", "*" }).result()[0];
+                if (!mem.LoadROM(rom.c_str())) {
+                    if (!mem.SetupMapper()) {
+                        cpu.LinkWithMemory(mem);
+                        rom_already_opened = true;
+                    }
+                    else {
+                        pfd::message("Error", "Unsupported mapper!", pfd::choice::ok, pfd::icon::error);
+                    }
+                }
+                else {
+                    pfd::message("Error", "Invalid ROM file!", pfd::choice::ok, pfd::icon::error);
+                }
+            }
+        }
         ImGui::Checkbox("Show debug window", &show_debug_window);
         ImGui::Checkbox("Show demo window", &show_demo_window);
         if (ImGui::Button("Step")) {
@@ -93,6 +95,12 @@ int main(int argc, char* argv[]){
         }
         if (ImGui::Button("Step * 100")) {
             cpu.ExecuteCycles(100);
+        }
+        if (ImGui::Button("Step * 1000")) {
+            cpu.ExecuteCycles(1000);
+        }
+        if (ImGui::Button("Step * 10000")) {
+            cpu.ExecuteCycles(10000);
         }
         ImGui::End();
 
@@ -108,7 +116,7 @@ int main(int argc, char* argv[]){
             ImGui::Text("\nApplication average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
         }
-        
+
         ImGui::Render();
 
         int display_w, display_h;

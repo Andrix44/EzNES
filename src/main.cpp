@@ -15,7 +15,6 @@
 
 
 bool LoadROM(Memory& mem, Cpu& cpu);
-void Exit();
 
 int main(int argc, char* argv[]){
     if (!glfwInit()) {
@@ -59,6 +58,11 @@ int main(int argc, char* argv[]){
     bool rom_already_opened = false;
     bool show_demo_window = false;
     bool show_debug_window = true;
+
+    ImVec4 red = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
+    ImVec4 green = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
+    ImVec4 color = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+    std::string flag_names[8] = { "Carry", "Zero", "Interrupt", "BCD", "Breakpoint", "-", "Overflow", "Negative" };
 
     while (!glfwWindowShouldClose(window)) {
         //cpu.ExecuteCycles(1);
@@ -119,14 +123,27 @@ int main(int argc, char* argv[]){
                 cpu.ExecuteCycles(10000);
             }
             ImGui::Separator();
+
             ImGui::Text("Registers: \n"
-                "A = 0x%X \n"
-                "X = 0x%X \n"
-                "Y = 0x%X \n"
-                "PC = 0x%X \n"
-                "SP = 0x%X \n"
-                , cpu.A, cpu.X, cpu.Y, cpu.pc, cpu.sp + 0x100);  // TODO: add flags
+                        "A = 0x%X \n"
+                        "X = 0x%X \n"
+                        "Y = 0x%X \n"
+                        "PC = 0x%X \n"
+                        "SP = 0x%X \n",
+                        cpu.A, cpu.X, cpu.Y, cpu.pc, cpu.sp + 0x100);  // TODO: add flags
+            ImGui::Text("Flags:");
+            for (int i = 0; i < 8; ++i) {
+                if (cpu.flags[7 - i]) {  // Reverse the order here so that the displayed flags are more readable
+                    color = green;
+                }
+                else {
+                    color = red;
+                }
+                ImGui::SameLine();
+                ImGui::TextColored(color, flag_names[7 - i].c_str());  // Same
+            }
             ImGui::Separator();
+
             ImGui::Text("\nApplication average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
         }

@@ -14,6 +14,9 @@
 //#include "ppu.h"
 
 
+bool LoadROM(Memory& mem, Cpu& cpu);
+void Exit();
+
 int main(int argc, char* argv[]){
     if (!glfwInit()) {
         printf("Error while initialising glfw!\n");
@@ -67,45 +70,55 @@ int main(int argc, char* argv[]){
             ImGui::ShowDemoWindow(&show_demo_window);
         }
 
-        ImGui::Begin("Main window");
-        if (ImGui::Button("Load ROM")) {
-            if (!rom_already_opened) {
-                std::string rom = pfd::open_file("Select a file", ".", { "NES ROMS", "*" }).result()[0];
-                if (!mem.LoadROM(rom.c_str())) {
-                    if (!mem.SetupMapper()) {
-                        cpu.LinkWithMemory(mem);
-                        rom_already_opened = true;
-                    }
-                    else {
-                        pfd::message("Error", "Unsupported mapper!", pfd::choice::ok, pfd::icon::error);
+        if (ImGui::BeginMainMenuBar()) {
+            if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("Load ROM", "", false)) {
+                    if (!rom_already_opened) {
+                        if (LoadROM(mem, cpu)) {
+                            rom_already_opened = true;
+                        }
                     }
                 }
-                else {
-                    pfd::message("Error", "Invalid ROM file!", pfd::choice::ok, pfd::icon::error);
+                if (ImGui::MenuItem("Exit", "", false)) {
+                    glfwSetWindowShouldClose(window, 1);
                 }
+                ImGui::EndMenu();
             }
+            if (ImGui::BeginMenu("Emulation")) {
+                if (ImGui::MenuItem("Resume", "", false)) {
+                    // TODO
+                }
+                if (ImGui::MenuItem("Pause", "", false)) {
+                    // TODO
+                }
+                if (ImGui::MenuItem("Stop", "", false)) {
+                    // TODO
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::MenuItem("Show/hide debug window", "CTRL+D", &show_debug_window);
+            ImGui::MenuItem("Show/hide demo window", "", &show_demo_window);
+            ImGui::EndMainMenuBar();
         }
-        ImGui::Checkbox("Show debug window", &show_debug_window);
-        ImGui::Checkbox("Show demo window", &show_demo_window);
-        if (ImGui::Button("Step")) {
-            cpu.ExecuteCycles(1);
-        }
-        if (ImGui::Button("Step * 10")) {
-            cpu.ExecuteCycles(10);
-        }
-        if (ImGui::Button("Step * 100")) {
-            cpu.ExecuteCycles(100);
-        }
-        if (ImGui::Button("Step * 1000")) {
-            cpu.ExecuteCycles(1000);
-        }
-        if (ImGui::Button("Step * 10000")) {
-            cpu.ExecuteCycles(10000);
-        }
-        ImGui::End();
 
-        if (show_debug_window) {
+        if (show_debug_window & rom_already_opened) {
             ImGui::Begin("Debug", &show_debug_window);
+            if (ImGui::Button("Step")) {
+                cpu.ExecuteCycles(1);
+            }
+            if (ImGui::Button("Step * 10")) {
+                cpu.ExecuteCycles(10);
+            }
+            if (ImGui::Button("Step * 100")) {
+                cpu.ExecuteCycles(100);
+            }
+            if (ImGui::Button("Step * 1000")) {
+                cpu.ExecuteCycles(1000);
+            }
+            if (ImGui::Button("Step * 10000")) {
+                cpu.ExecuteCycles(10000);
+            }
+            ImGui::Separator();
             ImGui::Text("Registers: \n"
                 "A = 0x%X \n"
                 "X = 0x%X \n"
@@ -113,6 +126,7 @@ int main(int argc, char* argv[]){
                 "PC = 0x%X \n"
                 "SP = 0x%X \n"
                 , cpu.A, cpu.X, cpu.Y, cpu.pc, cpu.sp + 0x100);  // TODO: add flags
+            ImGui::Separator();
             ImGui::Text("\nApplication average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
         }
@@ -139,4 +153,21 @@ int main(int argc, char* argv[]){
     glfwTerminate();
 
     return 0;
+}
+
+bool LoadROM(Memory& mem, Cpu& cpu) {
+    std::string rom = pfd::open_file("Select a file", ".", { "NES ROMS", "*" }).result()[0];
+    if (!mem.LoadROM(rom.c_str())) {
+        if (!mem.SetupMapper()) {
+            cpu.LinkWithMemory(mem);
+            return true;
+        }
+        else {
+            pfd::message("Error", "Unsupported mapper!", pfd::choice::ok, pfd::icon::error);
+        }
+    }
+    else {
+        pfd::message("Error", "Invalid ROM file!", pfd::choice::ok, pfd::icon::error);
+    }
+    return false;
 }

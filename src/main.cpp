@@ -16,9 +16,45 @@
 
 bool LoadROM(Memory& mem, Cpu& cpu);
 
+struct Logging {
+    ImGuiTextBuffer buff;
+    bool scroll_enabled = true;
+    bool scroll_to_bottom = false;
+
+    void AddLog(std::string entry) {
+        buff.append(entry.c_str());
+        if (scroll_enabled) {
+            scroll_to_bottom = true;
+        }
+    }
+
+    void Draw(bool *show_log_window)
+    {
+        if (!ImGui::Begin("Log", show_log_window)) {
+            ImGui::End();
+            return;
+        }
+
+        ImGui::Separator();
+        ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+
+        const char* buff_begin = buff.begin();
+        const char* buff_end = buff.end();
+
+        ImGui::TextUnformatted(buff_begin, buff_end);
+
+        if (scroll_to_bottom) {
+            ImGui::SetScrollHereY(1.0f);
+        }
+        scroll_to_bottom = false;
+        ImGui::EndChild();
+        ImGui::End();
+    }
+} log_helper;
+
 int main(int argc, char* argv[]){
     if (!glfwInit()) {
-        printf("Error while initialising glfw!\n");
+        log_helper.AddLog("Error while initialising glfw!\n");
         return 1;
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -34,11 +70,11 @@ int main(int argc, char* argv[]){
     glfwSwapInterval(1);  // VSync
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        printf("Error while initialising OpenGL!\n");
+        log_helper.AddLog("Error while initialising OpenGL!\n");
         return 1;
     }
     if (gladLoadGL() == 0) {
-        printf("Error while initialising glad!\n");
+        log_helper.AddLog("Error while initialising glad!\n");
         return 1;
     }
 
@@ -56,6 +92,7 @@ int main(int argc, char* argv[]){
     Cpu cpu;
 
     bool rom_already_opened = false;
+    bool show_log_window = true;
     bool show_demo_window = false;
     bool show_debug_window = true;
 
@@ -70,9 +107,6 @@ int main(int argc, char* argv[]){
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        if (show_demo_window) {
-            ImGui::ShowDemoWindow(&show_demo_window);
-        }
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
@@ -100,9 +134,21 @@ int main(int argc, char* argv[]){
                 }
                 ImGui::EndMenu();
             }
+            ImGui::MenuItem("Show/hide log", "CTRL+L", &show_log_window);
             ImGui::MenuItem("Show/hide debug window", "CTRL+D", &show_debug_window);
             ImGui::MenuItem("Show/hide demo window", "", &show_demo_window);
             ImGui::EndMainMenuBar();
+        }
+
+        if (show_log_window) {
+            ImGui::Begin("Log", &show_log_window);
+            ImGui::Checkbox("Autoscroll", &log_helper.scroll_enabled);
+            ImGui::SameLine();
+            if (ImGui::Button("Add text")) {
+                log_helper.AddLog("something\n");
+            }
+            log_helper.Draw(&show_log_window);
+            ImGui::End();
         }
 
         if (show_debug_window & rom_already_opened) {
@@ -146,6 +192,10 @@ int main(int argc, char* argv[]){
 
             ImGui::Text("\nApplication average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
+        }
+
+        if (show_demo_window) {
+            ImGui::ShowDemoWindow(&show_demo_window);
         }
 
         ImGui::Render();

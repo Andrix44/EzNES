@@ -149,6 +149,7 @@
     <ClCompile Include="include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\cpu.cpp" />
     <ClCompile Include="src\glad.c" />
+    <ClCompile Include="src\log.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mappers\nrom.cpp" />
     <ClCompile Include="src\memory.cpp" />
@@ -168,6 +169,7 @@
     <ClInclude Include="include\KHR\khrplatform.h" />
     <ClInclude Include="include\portable-file-dialogs\portable-file-dialogs.h" />
     <ClInclude Include="src\cpu.h" />
+    <ClInclude Include="src\log.h" />
     <ClInclude Include="src\mappers\mapper.h" />
     <ClInclude Include="src\mappers\nrom.h" />
     <ClInclude Include="src\memory.h" />

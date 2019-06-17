@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <log.h>
+
 #include <mappers/nrom.h>
 
 

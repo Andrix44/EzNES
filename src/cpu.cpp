@@ -3,7 +3,6 @@
 
 void Cpu::ExecuteCycles(const uint32_t cycles) {
     for (uint32_t i = 0; i < cycles; i++) {
-        // printf("-------------------------------------\n");
         instr = memory->Read(pc);
         Interpreter(instr);
     }
@@ -38,9 +37,6 @@ uint16_t Cpu::GetComplexAddress(enum class Addressing mode, const uint16_t val) 
     case Addressing::zpg_Y:
         assert(val < 256);
         return (val + Y) % 256;
-    default:
-        printf("It should be impossible for this text to appear!\n");
-        return 0xFFFF;
     }
 }
 
@@ -61,27 +57,27 @@ uint8_t Cpu::Pop() {
 
 void Cpu::ShiftLeftWithFlags(const uint16_t addr) {
     uint8_t byte = memory->Read(addr);
-    printf("Before left shift: Carry = %X, Zero = %X, Negative = %X, Byte = 0x%X\n",
-            flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
+    //printf("Before left shift: Carry = %X, Zero = %X, Negative = %X, Byte = 0x%X\n",
+    //        flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
     flags[Flags::carry] = (byte >> 7);
     byte <<= 1;
     flags[Flags::zero] = (byte == 0);
     flags[Flags::negative] = (byte >> 7);
     memory->Write(addr, byte);
-    printf("After left shift: Carry = %X, Zero = %X, Negative = %X, Byte = 0x%X\n",
-            flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
+    //printf("After left shift: Carry = %X, Zero = %X, Negative = %X, Byte = 0x%X\n",
+    //        flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
 }
 
 void Cpu::ShiftRightWithFlags(const uint16_t addr) {
     uint8_t byte = memory->Read(addr);
-    printf("Before right shift: Carry = %X, Zero = %X, Byte = 0x%X\n",
-            flags[Flags::carry], flags[Flags::zero], byte);
+    //printf("Before right shift: Carry = %X, Zero = %X, Byte = 0x%X\n",
+    //       flags[Flags::carry], flags[Flags::zero], byte);
     flags[Flags::carry] = (byte & 0x1);
     byte >>= 1;
     flags[Flags::zero] = (byte == 0);
     memory->Write(addr, byte);
-    printf("After right shift: Carry = %X, Zero = %X, Byte = 0x%X\n",
-            flags[Flags::carry], flags[Flags::zero], byte);
+    //printf("After right shift: Carry = %X, Zero = %X, Byte = 0x%X\n",
+    //        flags[Flags::carry], flags[Flags::zero], byte);
 }
 
 void Cpu::CompareWithMemory(const uint8_t byte, const uint16_t addr) {
@@ -93,10 +89,6 @@ void Cpu::CompareWithMemory(const uint8_t byte, const uint16_t addr) {
 }
 
 void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope that the compiler optimizes this into a jumptable
-    printf("-------------------------------------\n"
-           "A = 0x%X  X = 0x%X  Y = 0x%X\n"
-           "SP = 0x%X  PC = 0x%X  instr being executed = 0x%X\n", A, X, Y, sp + 0x100, pc, instr);
-
     uint16_t pc_start = pc;
     bool increment_pc = true;
     switch (instr) {
@@ -555,7 +547,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
 
     if (pc == pc_start) {
-        printf("\nUnimplemented instruction 0x%X\n", memory->Read(pc));
+        log_helper.AddLog("\nUnimplemented instruction " + memory->Read(pc));
     }
     // TODO: add cycle counter
 }

@@ -13,9 +13,9 @@ Memory::~Memory() {
 
 bool Memory::LoadROM(const char* location) {
     if (fopen_s(&input_ROM, location, "rb")) {
-        printf("Error while opening ROM!\n");
+        log_helper.AddLog("Error while opening ROM!\n");
     }
-    printf("Loading ROM at %s \n", location);
+    log_helper.AddLog("Loading ROM at " + static_cast<std::string>(location) + "\n");
     // TODO: add more error checking
 
     if (ReadHeader()) {
@@ -34,19 +34,19 @@ bool Memory::ReadHeader() {
     fread(&header[0], 1, HEADER_SIZE, input_ROM);
 
     if (header[0] == (int)"N"[0] && header[1] == (int)"E"[0] && header[2] == (int)"S"[0] && header[3] == 0x1A) {
-        printf("Compatible format detected!\n");
+        log_helper.AddLog("Compatible format detected!\n");
     } else {
-        printf("Unknown file format!\n");
+        log_helper.AddLog("Unknown file format!\n");
         return true;
     }
 
     bool NES_ver_2;
     if ((header[7] >> 2) && 0x3 == 0x2) {
-        printf("NES 2.0 format detected!\n");
+        log_helper.AddLog("NES 2.0 format detected!\n");
         NES_ver_2 = true;
     }
     else {
-        printf("iNES format detected!\n");
+        log_helper.AddLog("iNES format detected!\n");
         NES_ver_2 = false;
     }
     if (!NES_ver_2) {  // iNES header
@@ -59,7 +59,7 @@ bool Memory::ReadHeader() {
 
         bool overwritten = (header[11] + header[12] + header[13] + header[14] + header[15]) != 0;
         if (overwritten) {
-            printf("Incorrect header, ignoring bytes 7-15!\n");
+            log_helper.AddLog("Incorrect header, ignoring bytes 7-15!\n");
             mapper = header[6] >> 4;
         }
         else {
@@ -90,7 +90,7 @@ bool Memory::ReadHeader() {
 
     }
     else {  // NES 2.0 header
-        printf("NES 2.0 is currently unsupported!\n");
+        log_helper.AddLog("NES 2.0 is currently unsupported!\n");
         return true;
         /*
         uint8_t prg_nibble = header[9] & 0x0F;
@@ -132,10 +132,6 @@ bool Memory::ReadHeader() {
         wip2 = header[15]; */
     }
 
-    printf("Header loading successful!\n"
-        "PRG ROM size - %u, CHR ROM size - %u \n"
-        "PRG RAM size - %u, mapper - %u \n",
-        prg_rom_size, chr_rom_size, prg_ram_size, mapper);
     return false;
 }
 

@@ -37,6 +37,8 @@ uint16_t Cpu::GetComplexAddress(enum class Addressing mode, const uint16_t val) 
     case Addressing::zpg_Y:
         assert(val < 256);
         return (val + Y) % 256;
+    default:
+        assert(0);  // Impossible to reach
     }
 }
 
@@ -547,7 +549,9 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
 
     if (pc == pc_start) {
-        log_helper.AddLog("\nUnimplemented instruction " + memory->Read(pc));
+        char unimpl_instr[5];
+        sprintf_s(&unimpl_instr[0], sizeof(unimpl_instr), "0x%X", memory->Read(pc));
+        log_helper.AddLog("\nUnimplemented instruction " + std::string(unimpl_instr));
     }
     // TODO: add cycle counter
 }

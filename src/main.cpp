@@ -142,7 +142,7 @@ int main(int argc, char* argv[]){
                         "Y = 0x%X \n"
                         "PC = 0x%X \n"
                         "SP = 0x%X \n",
-                        cpu.A, cpu.X, cpu.Y, cpu.pc, cpu.sp + 0x100);  // TODO: add flags
+                        cpu.A, cpu.X, cpu.Y, cpu.pc, cpu.sp + 0x100);
             ImGui::Text("Flags:");
             for (int i = 0; i < 8; ++i) {
                 if (cpu.flags[7 - i]) {  // Reverse the order here so that the displayed flags are more readable
@@ -156,7 +156,7 @@ int main(int argc, char* argv[]){
             }
             ImGui::Separator();
 
-            ImGui::Text("\nApplication average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::Text("\n%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
         }
 

@@ -7,7 +7,7 @@
 
 class Logging {
 public:
-    bool scroll_enabled;
+    bool scroll_enabled = true;
 
     Logging();
     void AddLog(std::string entry);

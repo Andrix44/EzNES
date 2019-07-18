@@ -68,8 +68,6 @@ int main(int argc, char* argv[]){
     std::string flag_names[8] = { "Carry", "Zero", "Interrupt", "BCD", "Breakpoint", "-", "Overflow", "Negative" };
 
     while (!glfwWindowShouldClose(window)) {
-        //cpu.ExecuteCycles(1);
-
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -89,13 +87,13 @@ int main(int argc, char* argv[]){
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Emulation")) {
-                if (ImGui::MenuItem("Resume", "", false)) {
+                if (ImGui::MenuItem("Resume - Unimplemented", "", false)) {
                     // TODO
                 }
-                if (ImGui::MenuItem("Pause", "", false)) {
+                if (ImGui::MenuItem("Pause - Unimplemented", "", false)) {
                     // TODO
                 }
-                if (ImGui::MenuItem("Stop", "", false)) {
+                if (ImGui::MenuItem("Stop - Unimplemented", "", false)) {
                     // TODO
                 }
                 ImGui::EndMenu();
@@ -110,9 +108,6 @@ int main(int argc, char* argv[]){
             ImGui::Begin("Log", &show_log_window);
             ImGui::Checkbox("Autoscroll", &log_helper.scroll_enabled);
             ImGui::SameLine();
-            if (ImGui::Button("Add text")) {
-                log_helper.AddLog("something\n");
-            }
             log_helper.Draw(&show_log_window);
             ImGui::End();
         }

@@ -114,6 +114,9 @@ int main(int argc, char* argv[]){
 
         if (show_debug_window & rom_already_opened) {
             ImGui::Begin("Debug", &show_debug_window);
+            if (ImGui::Button("Jump to 0xC000 (nestest automation mode)")) {
+                cpu.pc = 0xC000;
+            }
             if (ImGui::Button("Step")) {
                 cpu.ExecuteCycles(1);
             }

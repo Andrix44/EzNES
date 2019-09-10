@@ -38,15 +38,15 @@ public:
     uint8_t A = 0x00, X = 0x00, Y = 0x00;
     uint8_t sp = 0xFD;
     uint16_t pc = 0x0000;
-    std::bitset<8> flags = 0b00100000;
-    /*                 negative-|| |||||
-                       overflow--| |||||
-                                   |||||
-                     breakpoint----|||||
-                  BCD(disabled)-----||||
-                      interrupt------||| TODO: Maybe 1 on init?
-                           zero-------||
-                          carry--------|*/
+    std::bitset<8> flags = 0b00100100;
+    /*              negative-|| |||||
+                    overflow--| |||||
+                                |||||
+                  breakpoint----|||||
+               BCD(disabled)-----||||
+                   interrupt------||| TODO: Is it 1 on init?
+                        zero-------||
+                       carry--------| */
 
 private:
     void Interpreter(const uint8_t instr);

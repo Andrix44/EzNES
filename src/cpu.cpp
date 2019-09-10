@@ -25,12 +25,6 @@ uint16_t Cpu::GetComplexAddress(enum class Addressing mode, const uint16_t val) 
         return ((memory->Read((val + 1) % 256) << 8) | memory->Read(val)) + Y;
 
     // TODO: remove these later, use them only as a template
-    case Addressing::rel:
-        assert(val < 256);
-        return pc + static_cast<int8_t>(val);
-    case Addressing::zpg:
-        assert(val < 256);
-        return val;
     case Addressing::zpg_X:
         assert(val < 256);
         return (val + X) % 256;
@@ -150,13 +144,13 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     //case 0x0f: break;
-    case 0x10: {  // BPL --
+    case 0x10: {  // BPL (rel) --
+        increment_pc = false;
+        pc += 2;
         if (!flags[Flags::negative]) {
-            pc += static_cast<int8_t>(memory->Read(pc + 1));
-            increment_pc = false;
+            pc += static_cast<int8_t>(memory->Read(pc - 1));
             break;
         }
-        pc += 1;
         break;
     }
     case 0x11: {  // ORA -NZ
@@ -218,17 +212,28 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0x2c: break;
     case 0x2d: break;
     case 0x2e: break;
-    case 0x2f: break;
-    case 0x30: break;
-    case 0x31: break;
+    case 0x2f: break; */
+    case 0x30: {  // BMI (rel) --
+        increment_pc = false;
+        pc += 2;
+        if (flags[Flags::negative]) {
+            pc += static_cast<int8_t>(memory->Read(pc - 1));
+            break;
+        }
+        break;
+    }
+    /* case 0x31: break;
     case 0x32: break;
     case 0x33: break;
     case 0x34: break;
     case 0x35: break;
     case 0x36: break;
-    case 0x37: break;
-    case 0x38: break;
-    case 0x39: break;
+    case 0x37: break; */
+    case 0x38: {  // SEC -C
+        flags[Flags::carry] = true;
+        break;
+    }
+    /* case 0x39: break;
     case 0x3a: break;
     case 0x3b: break;
     case 0x3c: break;
@@ -251,13 +256,25 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0x48: break;
     case 0x49: break;
     case 0x4a: break;
-    case 0x4b: break;
-    case 0x4c: break;
-    case 0x4d: break;
+    case 0x4b: break; */
+    case 0x4c: {  // JMP (abs) --
+        pc = GetImmediateAddress();
+        increment_pc = false;
+        break;
+    }
+    /* case 0x4d: break;
     case 0x4e: break;
-    case 0x4f: break;
-    case 0x50: break;
-    case 0x51: break;
+    case 0x4f: break; */
+    case 0x50: {  // BVC (rel) --
+        increment_pc = false;
+        pc += 2;
+        if (!flags[Flags::overflow]) {
+            pc += static_cast<int8_t>(memory->Read(pc - 1));
+            break;
+        }
+        break;
+    }
+    /* case 0x51: break;
     case 0x52: break;
     case 0x53: break;
     case 0x54: break;
@@ -288,13 +305,13 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0x6d: break;
     case 0x6e: break;
     case 0x6f: break; */
-    case 0x70: {  // BVS --
+    case 0x70: {  // BVS (rel) --
+        increment_pc = false;
+        pc += 2;
         if (flags[Flags::overflow]) {
-            pc += static_cast<int8_t>(memory->Read(pc + 1));
-            increment_pc = false;
+            pc += static_cast<int8_t>(memory->Read(pc - 1));
             break;
         }
-        pc += 1;
         break;
     }
     /* case 0x71: break;
@@ -324,9 +341,13 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 1;
         break;
     }
-    /* case 0x85: break;
-    case 0x86: break;
-    case 0x87: break; */
+    // case 0x85: break;
+    case 0x86: {  // STX (zpg) --
+        memory->Write(memory->Read(pc + 1), X);
+        pc += 1;
+        break;
+    }
+    //case 0x87: break;
     case 0x88: {  // DEY -NZ
         Y -= 1;
         flags[Flags::negative] = (Y >> 7);
@@ -347,18 +368,18 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 2;
         break;
     }
-    /* case 0x8f: break;
-    case 0x90: break; */
-    case 0x91: {  // BCC --
+    // case 0x8f: break;
+    case 0x90: {  // BCC (rel) --
+        increment_pc = false;
+        pc += 2;
         if (!flags[Flags::carry]) {
-            pc += static_cast<int8_t>(memory->Read(pc + 1));
-            increment_pc = false;
+            pc += static_cast<int8_t>(memory->Read(pc - 1));
             break;
         }
-        pc += 1;
         break;
     }
-    /* case 0x92: break;
+    /* case 0x91: break;
+    case 0x92: break;
     case 0x93: break;
     case 0x94: break; */
     case 0x95: {  // STA (zpg, X) --
@@ -418,9 +439,17 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     /* case 0xae: break;
-    case 0xaf: break;
-    case 0xb0: break;
-    case 0xb1: break;
+    case 0xaf: break; */
+    case 0xb0: {  // BCS (rel) --
+        increment_pc = false;
+        pc += 2;
+        if (flags[Flags::carry]) {
+            pc += static_cast<int8_t>(memory->Read(pc - 1));
+            break;
+        }
+        break;
+    }
+    /* case 0xb1: break;
     case 0xb2: break;
     case 0xb3: break;
     case 0xb4: break;
@@ -468,13 +497,13 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0xcd: break;
     case 0xce: break;
     case 0xcf: break; */
-    case 0xd0: {  // BNE --
+    case 0xd0: {  // BNE (rel) --
+        increment_pc = false;
+        pc += 2;
         if (!flags[Flags::zero]) {
-            pc += static_cast<int8_t>(memory->Read(pc + 1));
-            increment_pc = false;
+            pc += static_cast<int8_t>(memory->Read(pc - 1));
             break;
         }
-        pc += 1;
         break;
     }
     /* case 0xd1: break;
@@ -518,12 +547,13 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0xed: break;
     case 0xee: break;
     case 0xef: break; */
-    case 0xf0: {  // BEQ --
+    case 0xf0: {  // BEQ (rel)--
+        increment_pc = false;
+        pc += 2;
         if (flags[Flags::zero]) {
-            pc += static_cast<int8_t>(memory->Read(pc + 1));
+            pc += static_cast<int8_t>(memory->Read(pc - 1));
             break;
         }
-        pc += 1;
         break;
     }
     /* case 0xf1: break;

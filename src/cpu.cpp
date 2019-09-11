@@ -41,8 +41,8 @@ inline uint16_t Cpu::GetImmediateAddress() {
 }
 
 void Cpu::Push(const uint8_t byte) {
-    memory->Write(sp + 0x100, byte);
     --sp;
+    memory->Write(sp + 0x100, byte);
 }
 
 uint8_t Cpu::Pop() {
@@ -186,17 +186,24 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
     //case 0x1f: break;
     case 0x20: {  // JSR --
-        Push((pc + 3) >> 8);  // MAYBE + 2 ????
-        Push((pc + 3) & 0xFF);  // MAYBE the other way around???
+        Push((pc + 2) >> 8);
+        Push((pc + 2) & 0xFF);  // MAYBE the other way around???
         pc = GetImmediateAddress();
         increment_pc = false;
         break;
     }
     /* case 0x21: break;
     case 0x22: break;
-    case 0x23: break;
-    case 0x24: break;
-    case 0x25: break;
+    case 0x23: break; */
+    case 0x24: {  // BIT (zpg) -NZV
+        uint8_t value = memory->Read(pc + 1);
+        flags[Flags::negative] = value >> 7;
+        flags[Flags::zero] = (value & A) == 0;
+        flags[Flags::overflow] = (value >> 6) & 1;
+        pc += 1;
+        break;
+    }
+    /* case 0x25: break;
     case 0x26: break;
     case 0x27: break;
     case 0x28: break; */
@@ -208,9 +215,16 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     /* case 0x2a: break;
-    case 0x2b: break;
-    case 0x2c: break;
-    case 0x2d: break;
+    case 0x2b: break; */
+    case 0x2c: {  // BIT (abs) -NZV
+        uint8_t value = memory->Read(GetImmediateAddress());
+        flags[Flags::negative] = value >> 7;
+        flags[Flags::zero] = (value & A) == 0;
+        flags[Flags::overflow] = (value >> 6) & 1;
+        pc += 2;
+        break;
+    }
+    /* case 0x2d: break;
     case 0x2e: break;
     case 0x2f: break; */
     case 0x30: {  // BMI (rel) --
@@ -288,9 +302,12 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0x5c: break;
     case 0x5d: break;
     case 0x5e: break;
-    case 0x5f: break;
-    case 0x60: break;
-    case 0x61: break;
+    case 0x5f: break; */
+    case 0x60: { //  RTS --
+        pc = Pop() | (Pop() << 8);
+        break;
+    }
+    /* case 0x61: break;
     case 0x62: break;
     case 0x63: break;
     case 0x64: break;
@@ -341,7 +358,11 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 1;
         break;
     }
-    // case 0x85: break;
+    case 0x85: {  // STA (zpg) --
+        memory->Write(memory->Read(pc + 1), A);
+        pc += 1;
+        break;
+    }
     case 0x86: {  // STX (zpg) --
         memory->Write(memory->Read(pc + 1), X);
         pc += 1;

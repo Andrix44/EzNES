@@ -143,7 +143,7 @@ int main(int argc, char* argv[]){
                         cpu.A, cpu.X, cpu.Y, cpu.pc, cpu.sp + 0x100);
             ImGui::Text("Flags:");
             for (int i = 0; i < 8; ++i) {
-                if (cpu.flags[7 - i]) {  // Reverse the order here so that the displayed flags are more readable
+                if (cpu.flags[7L - i]) {  // Reverse the order here so that the displayed flags are more readable
                     color = green;
                 }
                 else {

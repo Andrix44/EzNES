@@ -56,6 +56,7 @@ private:
     uint8_t Pop();
     void ShiftLeftWithFlags(const uint16_t addr);
     void ShiftRightWithFlags(const uint16_t addr);
+    void AddMemToAccWithCarry(const uint16_t addr);
     void CompareWithMemory(const uint8_t byte, const uint16_t addr);
 
     uint8_t instr = NULL;

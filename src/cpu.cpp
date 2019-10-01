@@ -13,24 +13,30 @@ void Cpu::LinkWithMemory(Memory& mem) {
     pc = (memory->Read(0xFFFD) << 8) | memory->Read(0xFFFC);  // TODO: this is just a hack for the reset vector, implement it properly later
 }
 
-uint16_t Cpu::GetComplexAddress(enum class Addressing mode, const uint16_t val) {
+uint16_t Cpu::GetComplexAddress(enum class Addressing mode, const uint16_t addr) {
     switch (mode) {
-    case Addressing::ind:
-        return (memory->Read((val + 1) % 65536) << 8) | memory->Read(val);
+    case Addressing::ind: { // Hardware bug
+        uint8_t low = (addr & 0xFF);
+        low += 1;
+        low = static_cast<uint8_t>(low);
+        uint8_t high = (addr >> 8);
+        uint16_t new_addr = (high << 8) | low;
+        return (memory->Read(new_addr) << 8) | memory->Read(addr);
+    }
     case Addressing::ind_X:  // TODO: maybe these need the carry bit?
-        assert(val < 256);
-        return (memory->Read((val + X + 1) % 256) << 8) | memory->Read((val + X) % 256);
+        assert(addr < 256);
+        return (memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256);
     case Addressing::ind_Y:
-        assert(val < 256);
-        return ((memory->Read((val + 1) % 256) << 8) | memory->Read(val)) + Y;
+        assert(addr < 256);
+        return ((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y;
 
     // TODO: remove these later, use them only as a template
     case Addressing::zpg_X:
-        assert(val < 256);
-        return (val + X) % 256;
+        assert(addr < 256);
+        return (addr + X) % 256;
     case Addressing::zpg_Y:
-        assert(val < 256);
-        return (val + Y) % 256;
+        assert(addr < 256);
+        return (addr + Y) % 256;
     default:
         assert(0);  // Impossible to reach
         return 1;
@@ -58,11 +64,13 @@ void Cpu::ShiftLeftWithFlags(const uint16_t addr) {
     //        flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
     flags[Flags::carry] = (byte >> 7);
     byte <<= 1;
+    byte = static_cast<uint8_t>(byte);
     flags[Flags::zero] = (byte == 0);
     flags[Flags::negative] = (byte >> 7);
     memory->Write(addr, byte);
     //printf("After left shift: Carry = %X, Zero = %X, Negative = %X, Byte = 0x%X\n",
     //        flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
+    pc += 1;
 }
 
 void Cpu::ShiftRightWithFlags(const uint16_t addr) {
@@ -75,6 +83,40 @@ void Cpu::ShiftRightWithFlags(const uint16_t addr) {
     memory->Write(addr, byte);
     //printf("After right shift: Carry = %X, Zero = %X, Byte = 0x%X\n",
     //        flags[Flags::carry], flags[Flags::zero], byte);
+    pc += 1;
+}
+
+void Cpu::RotateLeftWithFlags(const uint16_t addr) {
+    uint8_t byte = memory->Read(addr);
+    //printf("Before left rotate: Carry = %X, Zero = %X, Negative = %X, Byte = 0x%X\n",
+    //        flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
+    bool old_carry = (byte & 0x1);
+    flags[Flags::carry] = (byte >> 7);
+    byte <<= 1;
+    byte |= static_cast<uint8_t>(old_carry);
+    byte = static_cast<uint8_t>(byte);
+    flags[Flags::zero] = (byte == 0);
+    flags[Flags::negative] = (byte >> 7);
+    memory->Write(addr, byte);
+    //printf("After left rotate: Carry = %X, Zero = %X, Negative = %X, Byte = 0x%X\n",
+    //        flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
+    pc += 1;
+}
+
+void Cpu::RotateRightWithFlags(const uint16_t addr) {
+    uint8_t byte = memory->Read(addr);
+    //printf("Before right rotate: Carry = %X, Zero = %X, Byte = 0x%X\n",
+    //       flags[Flags::carry], flags[Flags::zero], byte);
+    bool old_carry = flags[Flags::carry];
+    flags[Flags::negative] = old_carry;
+    flags[Flags::carry] = (byte & 0x1);
+    byte >>= 1;
+    byte |= (old_carry << 7);
+    flags[Flags::zero] = (byte == 0);
+    memory->Write(addr, byte);
+    //printf("After right rotate: Carry = %X, Zero = %X, Byte = 0x%X\n",
+    //        flags[Flags::carry], flags[Flags::zero], byte);
+    pc += 1;
 }
 
 void Cpu::AddMemToAccWithCarry(const uint16_t addr) {
@@ -137,7 +179,6 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
     case 0x06: {  // ASL (zpg) -NZC
         ShiftLeftWithFlags(memory->Read(pc + 1));
-        pc += 1;
         break;
     }
     // case 0x07: break;
@@ -155,6 +196,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0x0a: {  // ASL (acc) -NZC
         flags[Flags::carry] = (A >> 7);
         A <<= 1;
+        A = static_cast<uint8_t>(A);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         break;
@@ -170,7 +212,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
     case 0x0e: {  // ASL (abs) -NZC
         ShiftLeftWithFlags(GetImmediateAddress());
-        pc += 2;
+        pc += 1;
         break;
     }
     //case 0x0f: break;
@@ -202,7 +244,6 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
     case 0x16: {  // ASL (zpg_X) -NZC
         ShiftLeftWithFlags((memory->Read(pc + 1) + X) % 256);
-        pc += 1;
         break;
     }
     //case 0x17: break;
@@ -229,7 +270,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
     case 0x1e: {  // ASL (abs_X) -NZC
         ShiftLeftWithFlags(GetImmediateAddress() + X);
-        pc += 2;
+        pc += 1;
         break;
     }
     //case 0x1f: break;
@@ -264,8 +305,11 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 1;
         break;
     }
-    /* case 0x26: break;
-    case 0x27: break; */
+    case 0x26: {  // ROL (zpg) -NZC
+        RotateLeftWithFlags(memory->Read(pc + 1));
+        break;
+    }
+    /* case 0x27: break; */
     case 0x28: {  // PHA -NZCIDV
         flags = Pop();
         break;
@@ -277,8 +321,17 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 1;
         break;
     }
-    /* case 0x2a: break;
-    case 0x2b: break; */
+    case 0x2a: {  // ROL (acc) -NZC
+        bool old_carry = (A & 0x1);
+        flags[Flags::carry] = (A >> 7);
+        A <<= 1;
+        A |= static_cast<uint8_t>(old_carry);
+        A = static_cast<uint8_t>(A);
+        flags[Flags::zero] = (A == 0);
+        flags[Flags::negative] = (A >> 7);
+        break;
+    }
+    /* case 0x2b: break; */
     case 0x2c: {  // BIT (abs) -NZV
         uint8_t value = memory->Read(GetImmediateAddress());
         flags[Flags::negative] = value >> 7;
@@ -294,8 +347,12 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 2;
         break;
     }
-    /* case 0x2e: break;
-    case 0x2f: break; */
+    case 0x2e: {  // ROL (abs) -NZC
+        RotateLeftWithFlags(GetImmediateAddress());
+        pc += 1;
+        break;
+    }
+    /* case 0x2f: break; */
     case 0x30: {  // BMI (rel) --
         increment_pc = false;
         pc += 2;
@@ -322,8 +379,11 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 1;
         break;
     }
-    /* case 0x36: break;
-    case 0x37: break; */
+    case 0x36: {  // ROL (zpg_X) -NZC
+        RotateLeftWithFlags((memory->Read(pc + 1) + X) % 256);
+        break;
+    }
+    /* case 0x37: break; */
     case 0x38: {  // SEC -C
         flags[Flags::carry] = true;
         break;
@@ -345,8 +405,12 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 2;
         break;
     }
-    /* case 0x3e: break;
-    case 0x3f: break; */
+    case 0x3e: {  // ROL (abs_X) -NZC
+        RotateLeftWithFlags(GetImmediateAddress() + X);
+        pc += 1;
+        break;
+    }
+    /* case 0x3f: break; */
     case 0x40: {  // RTI -NZCIDV
         flags = Pop();
         pc = Pop() | (Pop() << 8);
@@ -371,9 +435,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0x46: {  // LSR (zpg) -ZC
-        uint16_t addr = memory->Read(pc + 1);
-        ShiftRightWithFlags(addr);
-        pc += 1;
+        ShiftRightWithFlags(memory->Read(pc + 1));
         break;
     }
     // case 0x47: break;
@@ -388,8 +450,13 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 1;
         break;
     }
-    /* case 0x4a: break;
-    case 0x4b: break; */
+    case 0x4a: {  // LSR (acc) -ZC
+        flags[Flags::carry] = (A & 0x1);
+        A >>= 1;
+        flags[Flags::zero] = (A == 0);
+        break;
+    }
+    /* case 0x4b: break; */
     case 0x4c: {  // JMP (abs) --
         pc = GetImmediateAddress();
         increment_pc = false;
@@ -402,8 +469,12 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 2;
         break;
     }
-    /* case 0x4e: break;
-    case 0x4f: break; */
+    case 0x4e: {  // LSR (abs) -ZC
+        ShiftRightWithFlags(GetImmediateAddress());
+        pc += 1;
+        break;
+    }
+    /* case 0x4f: break; */
     case 0x50: {  // BVC (rel) --
         increment_pc = false;
         pc += 2;
@@ -430,8 +501,11 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 1;
         break;
     }
-    /* case 0x56: break;
-    case 0x57: break;
+    case 0x56: {  // LSR (zpg_X) -ZC
+        ShiftRightWithFlags((memory->Read(pc + 1) + X) % 256);
+        break;
+    }
+    /* case 0x57: break;
     case 0x58: break; */
     case 0x59: {  // EOR (abs_Y) -NZ
         A ^= memory->Read(GetImmediateAddress() + Y);
@@ -450,8 +524,12 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 2;
         break;
     }
-    /* case 0x5e: break;
-    case 0x5f: break; */
+    case 0x5e: {  // LSR (abs_X) -ZC
+        ShiftRightWithFlags(GetImmediateAddress() + X);
+        pc += 1;
+        break;
+    }
+    /* case 0x5f: break; */
     case 0x60: {  // RTS --
         pc = Pop() | (Pop() << 8);
         break;
@@ -467,8 +545,11 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         AddMemToAccWithCarry(memory->Read(pc + 1));
         break;
     }
-    /* case 0x66: break;
-    case 0x67: break; */
+    case 0x66: {  // ROR (zpg) -NZC
+        RotateRightWithFlags(memory->Read(pc + 1));
+        break;
+    }
+    /* case 0x67: break; */
     case 0x68: {  // PLA -NZ
         A = Pop();
         flags[Flags::negative] = (A >> 7);
@@ -479,16 +560,32 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         AddMemToAccWithCarry(pc + 1);
         break;
     }
-    /* case 0x6a: break;
-    case 0x6b: break;
-    case 0x6c: break; */
+    case 0x6a: {  // ROR (acc) -NZC
+        bool old_carry = flags[Flags::carry];
+        flags[Flags::negative] = old_carry;
+        flags[Flags::carry] = (A & 0x1);
+        A >>= 1;
+        A |= (old_carry << 7);
+        flags[Flags::zero] = (A == 0);
+        break;
+    }
+    /* case 0x6b: break; */
+    case 0x6c: {  // JMP (ind) --
+        pc = GetComplexAddress(Addressing::ind, GetImmediateAddress());
+        increment_pc = false;
+        break;
+    }
     case 0x6d: {  // ADC (abs) -NZCV
         AddMemToAccWithCarry(GetImmediateAddress());
         pc += 1;
         break;
     }
-    /* case 0x6e: break;
-    case 0x6f: break; */
+    case 0x6e: {  // ROR (abs) -NZC
+        RotateRightWithFlags(GetImmediateAddress());
+        pc += 1;
+        break;
+    }
+    /* case 0x6f: break; */
     case 0x70: {  // BVS (rel) --
         increment_pc = false;
         pc += 2;
@@ -509,8 +606,11 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         AddMemToAccWithCarry((memory->Read(pc + 1) + X) % 256);
         break;
     }
-    /* case 0x76: break;
-    case 0x77: break; */
+    case 0x76: {  // ROR (zpg_X) -NZC
+        RotateRightWithFlags((memory->Read(pc + 1) + X) % 256);
+        break;
+    }
+    /* case 0x77: break; */
     case 0x78: {  // SEI -I
         flags[Flags::interrupt] = false;
         break;
@@ -528,8 +628,12 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 1;
         break;
     }
-    /* case 0x7e: break;
-    case 0x7f: break;
+    case 0x7e: {  // ROR (abs_X) -NZC
+        RotateRightWithFlags(GetImmediateAddress() + X);
+        pc += 1;
+        break;
+    }
+    /* case 0x7f: break;
     case 0x80: break; */
     case 0x81: {  // STA (ind_X) --
         memory->Write(GetComplexAddress(Addressing::ind_X, memory->Read(pc + 1)), A);
@@ -567,8 +671,12 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         flags[Flags::zero] = (A == 0);
         break;
     }
-    /* case 0x8b: break;
-    case 0x8c: break; */
+    /* case 0x8b: break; */
+    case 0x8c: {  // STY (abs) --
+        memory->Write(GetImmediateAddress(), Y);
+        pc += 2;
+        break;
+    }
     case 0x8d: {  // STA (abs) --
         memory->Write(GetImmediateAddress(), A);
         pc += 2;
@@ -595,15 +703,23 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     /* case 0x92: break;
-    case 0x93: break;
-    case 0x94: break; */
+    case 0x93: break; */
+    case 0x94: {  // STY (zpg_X) --
+        memory->Write((memory->Read(pc + 1) + X) % 256, Y);
+        pc += 1;
+        break;
+    }
     case 0x95: {  // STA (zpg_X) --
         memory->Write((memory->Read(pc + 1) + X) % 256, A);
         pc += 1;
         break;
     }
-    /* case 0x96: break;
-    case 0x97: break; */
+    case 0x96: {  // STX (zpg_Y) --
+        memory->Write((memory->Read(pc + 1) + Y) % 256, X);
+        pc += 1;
+        break;
+    }
+    /* case 0x97: break; */
     case 0x98: {  // TYA -NZ
         A = Y;
         flags[Flags::negative] = (A >> 7);
@@ -649,9 +765,15 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 1;
         break;
     }
-    /* case 0xa3: break;
-    case 0xa4: break; */
-    case 0xa5: break; {  // LDA (zpg) -NZ
+    /* case 0xa3: break; */
+    case 0xa4: {  // LDY (zpg) -NZ
+        Y = memory->Read(memory->Read(pc + 1));
+        flags[Flags::negative] = (Y >> 7);
+        flags[Flags::zero] = (Y == 0);
+        pc += 1;
+        break;
+    }
+    case 0xa5: {  // LDA (zpg) -NZ
         A = memory->Read(memory->Read(pc + 1));
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
@@ -685,8 +807,14 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         flags[Flags::zero] = (X == 0);
         break;
     }
-    /* case 0xab: break;
-    case 0xac: break; */
+    /* case 0xab: break; */
+    case 0xac: {  // LDY (abs) -NZ
+        Y = memory->Read(GetImmediateAddress());
+        flags[Flags::negative] = (Y >> 7);
+        flags[Flags::zero] = (Y == 0);
+        pc += 2;
+        break;
+    }
     case 0xad: {  // LDA (abs) -NZ
         A = memory->Read(GetImmediateAddress());
         flags[Flags::negative] = (A >> 7);
@@ -719,8 +847,14 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     /* case 0xb2: break;
-    case 0xb3: break;
-    case 0xb4: break; */
+    case 0xb3: break; */
+    case 0xb4: {  // LDY (zpg_X) -NZ
+        Y = memory->Read((memory->Read(pc + 1) + X) % 256);
+        flags[Flags::negative] = (Y >> 7);
+        flags[Flags::zero] = (Y == 0);
+        pc += 1;
+        break;
+    }
     case 0xb5: {  // LDA (zpg_X) -NZ
         A = memory->Read((memory->Read(pc + 1) + X) % 256);
         flags[Flags::negative] = (A >> 7);
@@ -753,8 +887,14 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         flags[Flags::zero] = (X == 0);
         break;
     }
-    /* case 0xbb: break;
-    case 0xbc: break; */
+    /* case 0xbb: break; */
+    case 0xbc: {  // LDY (abs_X) -NZ
+        Y = memory->Read(GetImmediateAddress() + X);
+        flags[Flags::negative] = (Y >> 7);
+        flags[Flags::zero] = (Y == 0);
+        pc += 2;
+        break;
+    }
     case 0xbd: {  // LDA (abs_X) -NZ
         A = memory->Read(GetImmediateAddress() + X);
         flags[Flags::negative] = (A >> 7);
@@ -918,8 +1058,17 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         SubMemFromAccWithBorrow(memory->Read(pc + 1));
         break;
     }
-    /* case 0xe6: break;
-    case 0xe7: break; */
+    case 0xe6: {  // INC (zpg) -NZ
+        uint16_t addr = memory->Read(pc + 1);
+        uint8_t byte = memory->Read(addr);
+        byte += 1;
+        flags[Flags::negative] = (byte >> 7);
+        flags[Flags::zero] = (byte == 0);
+        memory->Write(addr, byte);
+        pc += 1;
+        break;
+    }
+    /* case 0xe7: break; */
     case 0xe8: {  // INX -NZ
         X += 1;
         flags[Flags::negative] = (X >> 7);
@@ -944,8 +1093,17 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 1;
         break;
     }
-    /* case 0xee: break;
-    case 0xef: break; */
+    case 0xee: {  // INC (abs) -NZ
+        uint16_t addr = GetImmediateAddress();
+        uint8_t byte = memory->Read(addr);
+        byte += 1;
+        flags[Flags::negative] = (byte >> 7);
+        flags[Flags::zero] = (byte == 0);
+        memory->Write(addr, byte);
+        pc += 2;
+        break;
+    }
+    /* case 0xef: break; */
     case 0xf0: {  // BEQ (rel)--
         increment_pc = false;
         pc += 2;
@@ -966,8 +1124,17 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         SubMemFromAccWithBorrow((memory->Read(pc + 1) + X) % 256);
         break;
     }
-    /* case 0xf6: break;
-    case 0xf7: break; */
+    case 0xf6: {  // INC (zpg_X) -NZ
+        uint16_t addr = ((memory->Read(pc + 1) + X) % 256);
+        uint8_t byte = memory->Read(addr);
+        byte += 1;
+        flags[Flags::negative] = (byte >> 7);
+        flags[Flags::zero] = (byte == 0);
+        memory->Write(addr, byte);
+        pc += 1;
+        break;
+    }
+    /* case 0xf7: break; */
     case 0xf8: {  //  SED -D
         flags[Flags::decimal] = true;
         break;
@@ -985,8 +1152,17 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         pc += 1;
         break;
     }
-    /* case 0xfe: break;
-    case 0xff: break; */
+    case 0xfe: {  // INC (abs_X) -NZ
+        uint16_t addr = (GetImmediateAddress() + X);
+        uint8_t byte = memory->Read(addr);
+        byte += 1;
+        flags[Flags::negative] = (byte >> 7);
+        flags[Flags::zero] = (byte == 0);
+        memory->Write(addr, byte);
+        pc += 2;
+        break;
+    }
+    /* case 0xff: break; */
     default:
         increment_pc = false;
         char unimpl_instr[5];

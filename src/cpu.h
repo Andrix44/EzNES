@@ -56,6 +56,8 @@ private:
     uint8_t Pop();
     void ShiftLeftWithFlags(const uint16_t addr);
     void ShiftRightWithFlags(const uint16_t addr);
+    void RotateLeftWithFlags(const uint16_t addr);
+    void RotateRightWithFlags(const uint16_t addr);
     void AddMemToAccWithCarry(const uint16_t addr);
     void SubMemFromAccWithBorrow(const uint16_t addr);
     void CompareWithMemory(const uint8_t byte, const uint16_t addr);

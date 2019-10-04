@@ -2,15 +2,54 @@
 
 
 void Cpu::ExecuteCycles(const uint32_t cycles) {
+    if (!flags[Flags::unused]) {  // Prevents an access violation if some of the buttons are pressed before a rom is loaded
+        return;
+    }
     for (uint32_t i = 0; i < cycles; i++) {
         instr = memory->Read(pc);
         Interpreter(instr);
+        flags[Flags::unused] = true;  // TODO: maybe this is not right
     }
 }
 
-void Cpu::LinkWithMemory(Memory& mem) {
-    memory = &mem;
-    pc = (memory->Read(0xFFFD) << 8) | memory->Read(0xFFFC);  // TODO: this is just a hack for the reset vector, implement it properly later
+void Cpu::Reset() {
+    pc = (memory->Read(0xFFFD) << 8) | memory->Read(0xFFFC);
+    A = X = Y = 0;
+    sp = 0xFD;
+    flags = 0b00100000;
+    // cycles = 8;
+}
+
+void Cpu::IRQ() {
+    if (!flags[Flags::interrupt]) {
+        memory->Write(sp + 0x100, pc >> 8);
+        --sp;
+        memory->Write(sp + 0x100, pc & 0xFF);
+        --sp;
+
+        flags[Flags::breakpoint] = 0;
+        flags[Flags::interrupt] = 0;
+        memory->Write(sp + 0x100, static_cast<uint8_t>(flags.to_ulong()));
+        --sp;
+
+        pc = (memory->Read(0xFFFF) << 8) | memory->Read(0xFFFE);
+        // cycles = 7;
+    }
+}
+
+void Cpu::NMI() {
+    memory->Write(sp + 0x100, pc >> 8);
+    --sp;
+    memory->Write(sp + 0x100, pc & 0xFF);
+    --sp;
+
+    flags[Flags::breakpoint] = 0;
+    flags[Flags::interrupt] = 0;
+    memory->Write(sp + 0x100, static_cast<uint8_t>(flags.to_ulong()));
+    --sp;
+
+    pc = (memory->Read(0xFFFB) << 8) | memory->Read(0xFFFA);
+    // cycles = 8;
 }
 
 uint16_t Cpu::GetComplexAddress(enum class Addressing mode, const uint16_t addr) {
@@ -29,14 +68,6 @@ uint16_t Cpu::GetComplexAddress(enum class Addressing mode, const uint16_t addr)
     case Addressing::ind_Y:
         assert(addr < 256);
         return ((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y;
-
-    // TODO: remove these later, use them only as a template
-    case Addressing::zpg_X:
-        assert(addr < 256);
-        return (addr + X) % 256;
-    case Addressing::zpg_Y:
-        assert(addr < 256);
-        return (addr + Y) % 256;
     default:
         assert(0);  // Impossible to reach
         return 1;
@@ -60,36 +91,26 @@ uint8_t Cpu::Pop() {
 
 void Cpu::ShiftLeftWithFlags(const uint16_t addr) {
     uint8_t byte = memory->Read(addr);
-    //printf("Before left shift: Carry = %X, Zero = %X, Negative = %X, Byte = 0x%X\n",
-    //        flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
     flags[Flags::carry] = (byte >> 7);
     byte <<= 1;
     byte = static_cast<uint8_t>(byte);
     flags[Flags::zero] = (byte == 0);
     flags[Flags::negative] = (byte >> 7);
     memory->Write(addr, byte);
-    //printf("After left shift: Carry = %X, Zero = %X, Negative = %X, Byte = 0x%X\n",
-    //        flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
     pc += 1;
 }
 
 void Cpu::ShiftRightWithFlags(const uint16_t addr) {
     uint8_t byte = memory->Read(addr);
-    //printf("Before right shift: Carry = %X, Zero = %X, Byte = 0x%X\n",
-    //       flags[Flags::carry], flags[Flags::zero], byte);
     flags[Flags::carry] = (byte & 0x1);
     byte >>= 1;
     flags[Flags::zero] = (byte == 0);
     memory->Write(addr, byte);
-    //printf("After right shift: Carry = %X, Zero = %X, Byte = 0x%X\n",
-    //        flags[Flags::carry], flags[Flags::zero], byte);
     pc += 1;
 }
 
 void Cpu::RotateLeftWithFlags(const uint16_t addr) {
     uint8_t byte = memory->Read(addr);
-    //printf("Before left rotate: Carry = %X, Zero = %X, Negative = %X, Byte = 0x%X\n",
-    //        flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
     bool old_carry = (byte & 0x1);
     flags[Flags::carry] = (byte >> 7);
     byte <<= 1;
@@ -98,15 +119,11 @@ void Cpu::RotateLeftWithFlags(const uint16_t addr) {
     flags[Flags::zero] = (byte == 0);
     flags[Flags::negative] = (byte >> 7);
     memory->Write(addr, byte);
-    //printf("After left rotate: Carry = %X, Zero = %X, Negative = %X, Byte = 0x%X\n",
-    //        flags[Flags::carry], flags[Flags::zero], flags[Flags::negative], byte);
     pc += 1;
 }
 
 void Cpu::RotateRightWithFlags(const uint16_t addr) {
     uint8_t byte = memory->Read(addr);
-    //printf("Before right rotate: Carry = %X, Zero = %X, Byte = 0x%X\n",
-    //       flags[Flags::carry], flags[Flags::zero], byte);
     bool old_carry = flags[Flags::carry];
     flags[Flags::negative] = old_carry;
     flags[Flags::carry] = (byte & 0x1);
@@ -114,16 +131,15 @@ void Cpu::RotateRightWithFlags(const uint16_t addr) {
     byte |= (old_carry << 7);
     flags[Flags::zero] = (byte == 0);
     memory->Write(addr, byte);
-    //printf("After right rotate: Carry = %X, Zero = %X, Byte = 0x%X\n",
-    //        flags[Flags::carry], flags[Flags::zero], byte);
     pc += 1;
 }
 
 void Cpu::AddMemToAccWithCarry(const uint16_t addr) {
     uint8_t val = memory->Read(addr);
     uint16_t result = A + val + flags[Flags::carry];
-    flags[Flags::overflow] = (((A ^ result) & (val ^ result)) >> 7);
-    A = static_cast<uint8_t>(result);  // TODO: does this work as intended?
+    flags[Flags::overflow] = (((A ^ result) & ~(A ^ val)) >> 7);  // TODO: does this work as intended?
+    // flags[Flags::overflow] = (((A ^ result) & (val ^ result)) >> 7);
+    A = static_cast<uint8_t>(result);
     flags[Flags::negative] = (A >> 7);
     flags[Flags::zero] = (A == 0);
     flags[Flags::carry] = (result >> 8);

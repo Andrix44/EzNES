@@ -57,7 +57,6 @@ int main(int argc, char* argv[]){
     //Ppu ppu;
     Cpu cpu;
 
-    bool rom_already_opened = false;
     bool show_log_window = true;
     bool show_demo_window = false;
     bool show_debug_window = true;
@@ -75,11 +74,7 @@ int main(int argc, char* argv[]){
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Load ROM", "", false)) {
-                    if (!rom_already_opened) {
-                        if (LoadROM(mem, cpu)) {
-                            rom_already_opened = true;
-                        }
-                    }
+                    LoadROM(mem, cpu);
                 }
                 if (ImGui::MenuItem("Exit", "", false)) {
                     glfwSetWindowShouldClose(window, 1);
@@ -112,7 +107,7 @@ int main(int argc, char* argv[]){
             ImGui::End();
         }
 
-        if (show_debug_window & rom_already_opened) {
+        if (show_debug_window) {
             ImGui::Begin("Debug", &show_debug_window);
             if (ImGui::Button("Jump to 0xC000 (nestest automation mode)")) {
                 cpu.pc = 0xC000;
@@ -190,7 +185,8 @@ bool LoadROM(Memory& mem, Cpu& cpu) {
     std::string rom = pfd::open_file("Select a file", ".", { "NES ROMS", "*" }).result()[0];
     if (!mem.LoadROM(rom.c_str())) {
         if (!mem.SetupMapper()) {
-            cpu.LinkWithMemory(mem);
+            cpu.memory = &mem;
+            cpu.Reset();
             return true;
         }
         else {

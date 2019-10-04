@@ -12,7 +12,7 @@ constexpr int CPU_CLOCKSPEED = MASTER_CLOCKSPEED / 12;
 
 enum Flags {
     carry = 0, zero, interrupt,
-    decimal, breakpoint, padding,
+    decimal, breakpoint, unused,
     overflow, negative
 };
 
@@ -31,22 +31,25 @@ enum class Addressing {
 class Cpu {
 public:
     void ExecuteCycles(const uint32_t cycles);
-    void LinkWithMemory(Memory& mem);
+    void Reset();
+    void IRQ();
+    void NMI();
 
     Memory* memory;
 
     uint8_t A = 0x00, X = 0x00, Y = 0x00;
-    uint8_t sp = 0xFD;
+    uint8_t sp = 0x0;
     uint16_t pc = 0x0000;
-    std::bitset<8> flags = 0b00100100;
-    /*              negative-|| |||||
-                    overflow--| |||||
-                                |||||
+    std::bitset<8> flags = 0b00000000;
+    /*              negative-||||||||
+                    overflow--|||||||
+                      unused---||||||
                   breakpoint----|||||
                BCD(disabled)-----||||
-                   interrupt------||| TODO: Is it 1 on init?
+           interrupt disable------|||
                         zero-------||
                        carry--------| */
+    uint64_t cycles = 0;
 
 private:
     void Interpreter(const uint8_t instr);

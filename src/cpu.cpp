@@ -1,11 +1,11 @@
 #include "cpu.h"
 
 
-void Cpu::ExecuteCycles(const uint32_t cycles) {
+void Cpu::ExecuteInstructions(const uint32_t count) {
     if (!flags[Flags::unused]) {  // Prevents an access violation if some of the buttons are pressed before a rom is loaded
         return;
     }
-    for (uint32_t i = 0; i < cycles; i++) {
+    for (uint32_t i = 0; i < count; i++) {
         instr = memory->Read(pc);
         Interpreter(instr);
         flags[Flags::unused] = true;  // TODO: maybe this is not right
@@ -16,8 +16,9 @@ void Cpu::Reset() {
     pc = (memory->Read(0xFFFD) << 8) | memory->Read(0xFFFC);
     A = X = Y = 0;
     sp = 0xFD;
-    flags = 0b00100000;
-    // cycles = 8;
+    flags = 0b00100100;
+    cycles = 0;
+    cycles += 8;
 }
 
 void Cpu::IRQ() {
@@ -27,13 +28,14 @@ void Cpu::IRQ() {
         memory->Write(sp + 0x100, pc & 0xFF);
         --sp;
 
+        flags[Flags::unused] = 1;
         flags[Flags::breakpoint] = 0;
-        flags[Flags::interrupt] = 0;
+        flags[Flags::interrupt] = 1;
         memory->Write(sp + 0x100, static_cast<uint8_t>(flags.to_ulong()));
         --sp;
 
         pc = (memory->Read(0xFFFF) << 8) | memory->Read(0xFFFE);
-        // cycles = 7;
+        cycles += 7;
     }
 }
 
@@ -43,35 +45,14 @@ void Cpu::NMI() {
     memory->Write(sp + 0x100, pc & 0xFF);
     --sp;
 
+    flags[Flags::unused] = 1;
     flags[Flags::breakpoint] = 0;
-    flags[Flags::interrupt] = 0;
+    flags[Flags::interrupt] = 1;
     memory->Write(sp + 0x100, static_cast<uint8_t>(flags.to_ulong()));
     --sp;
 
     pc = (memory->Read(0xFFFB) << 8) | memory->Read(0xFFFA);
-    // cycles = 8;
-}
-
-uint16_t Cpu::GetComplexAddress(enum class Addressing mode, const uint16_t addr) {
-    switch (mode) {
-    case Addressing::ind: { // Hardware bug
-        uint8_t low = (addr & 0xFF);
-        low += 1;
-        low = static_cast<uint8_t>(low);
-        uint8_t high = (addr >> 8);
-        uint16_t new_addr = (high << 8) | low;
-        return (memory->Read(new_addr) << 8) | memory->Read(addr);
-    }
-    case Addressing::ind_X:  // TODO: maybe these need the carry bit?
-        assert(addr < 256);
-        return (memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256);
-    case Addressing::ind_Y:
-        assert(addr < 256);
-        return ((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y;
-    default:
-        assert(0);  // Impossible to reach
-        return 1;
-    }
+    cycles += 8;
 }
 
 inline uint16_t Cpu::GetImmediateAddress() {
@@ -175,9 +156,26 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     log_helper.AddLog("\nExecuting instruction " + std::string(instr_executed) + " at address " + std::string(pc_char));
 
     switch (instr) {
-    // case 0x00: break;
+    case 0x00: {  // BRK -I
+        pc += 1;
+        memory->Write(sp + 0x100, pc >> 8);
+        --sp;
+        memory->Write(sp + 0x100, pc & 0xFF);
+        --sp;
+
+        flags[Flags::interrupt] = 1;
+        flags[Flags::breakpoint] = 1;
+        memory->Write(sp + 0x100, static_cast<uint8_t>(flags.to_ulong()));
+        --sp;
+        flags[Flags::breakpoint] = 0;
+
+        pc = (memory->Read(0xFFFF) << 8) | memory->Read(0xFFFE);
+        increment_pc = false;
+        break;
+    }
     case 0x01: {  // ORA (ind_X) -NZ
-        A = A | memory->Read(GetComplexAddress(Addressing::ind_X, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        A = A | memory->Read((memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256));
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -199,6 +197,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
     // case 0x07: break;
     case 0x08: {  // PHP --
+        flags[Flags::interrupt] = true;
         Push(static_cast<uint8_t>(flags.to_ulong()));
         break;
     }
@@ -236,13 +235,18 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         increment_pc = false;
         pc += 2;
         if (!flags[Flags::negative]) {
-            pc += static_cast<int8_t>(memory->Read(pc - 1));
+            ++cycles;
+            uint16_t abs = pc + static_cast<int8_t>(memory->Read(pc - 1));
+            cycles += ((abs & 0xFF00) != (pc & 0xFF00));
+            pc = abs;
             break;
         }
         break;
     }
     case 0x11: {  // ORA (ind_Y) -NZ
-        A |= memory->Read(GetComplexAddress(Addressing::ind_Y, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        cycles += ((addr + 1) > 0xFF);
+        A |= memory->Read(((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -268,7 +272,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0x19: {  // ORA (abs_Y) -NZ
-        A |= memory->Read(GetImmediateAddress() + Y);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_y = abs + Y;
+        cycles += ((abs & 0xFF) != (abs_y & 0xFF));
+        A |= memory->Read(abs_y);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;
@@ -278,7 +285,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0x1b: break;
     case 0x1c: break; */
     case 0x1d: {  // ORA (abs_X) -NZ
-        A |= memory->Read(GetImmediateAddress() + X);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_x = abs + X;
+        cycles += ((abs & 0xFF) != (abs_x & 0xFF));
+        A |= memory->Read(abs_x);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;
@@ -298,7 +308,8 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0x21: {  // AND (ind_X) -NZ
-        A |= memory->Read(GetComplexAddress(Addressing::ind_X, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        A |= memory->Read((memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256));
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -326,8 +337,9 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     /* case 0x27: break; */
-    case 0x28: {  // PHA -NZCIDV
+    case 0x28: {  // PLP -NZCIDV
         flags = Pop();
+        flags[Flags::breakpoint] = false;
         break;
     }
     case 0x29: {  // AND (imm) -NZ
@@ -373,13 +385,18 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         increment_pc = false;
         pc += 2;
         if (flags[Flags::negative]) {
-            pc += static_cast<int8_t>(memory->Read(pc - 1));
+            ++cycles;
+            uint16_t abs = pc + static_cast<int8_t>(memory->Read(pc - 1));
+            cycles += ((abs & 0xFF00) != (pc & 0xFF00));
+            pc = abs;
             break;
         }
         break;
     }
     case 0x31: {  // AND (ind_Y) -NZ
-        A |= memory->Read(GetComplexAddress(Addressing::ind_Y, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        cycles += ((addr + 1) > 0xFF);
+        A |= memory->Read(((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -405,7 +422,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0x39: {  // AND (abs_Y) -NZ
-        A |= memory->Read(GetImmediateAddress() + Y);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_y = abs + Y;
+        cycles += ((abs & 0xFF) != (abs_y & 0xFF));
+        A |= memory->Read(abs_y);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;
@@ -415,7 +435,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0x3b: break;
     case 0x3c: break; */
     case 0x3d: {  // AND (abs_X) -NZ
-        A |= memory->Read(GetImmediateAddress() + X);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_x = abs + X;
+        cycles += ((abs & 0xFF) != (abs_x & 0xFF));
+        A |= memory->Read(abs_x);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;
@@ -429,12 +452,14 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     /* case 0x3f: break; */
     case 0x40: {  // RTI -NZCIDV
         flags = Pop();
+        flags[Flags::breakpoint] = false;
         pc = Pop() | (Pop() << 8);
         increment_pc = false;
         break;
     }
     case 0x41: {  // EOR (ind_X) -NZ
-        A ^= memory->Read(GetComplexAddress(Addressing::ind_X, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        A ^= memory->Read((memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256));
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -495,13 +520,18 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         increment_pc = false;
         pc += 2;
         if (!flags[Flags::overflow]) {
-            pc += static_cast<int8_t>(memory->Read(pc - 1));
+            ++cycles;
+            uint16_t abs = pc + static_cast<int8_t>(memory->Read(pc - 1));
+            cycles += ((abs & 0xFF00) != (pc & 0xFF00));
+            pc = abs;
             break;
         }
         break;
     }
     case 0x51: {  // EOR (ind_Y) -NZ
-        A ^= memory->Read(GetComplexAddress(Addressing::ind_Y, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        cycles += ((addr + 1) > 0xFF);
+        A ^= memory->Read(((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -524,7 +554,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     /* case 0x57: break;
     case 0x58: break; */
     case 0x59: {  // EOR (abs_Y) -NZ
-        A ^= memory->Read(GetImmediateAddress() + Y);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_y = abs + Y;
+        cycles += ((abs & 0xFF) != (abs_y & 0xFF));
+        A ^= memory->Read(abs_y);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;
@@ -534,7 +567,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0x5b: break;
     case 0x5c: break; */
     case 0x5d: {  // EOR (abs_X) -NZ
-        A ^= memory->Read(GetImmediateAddress() + X);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_x = abs + X;
+        cycles += ((abs & 0xFF) != (abs_x & 0xFF));
+        A ^= memory->Read(abs_x);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;
@@ -551,7 +587,8 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0x61: {  // ADC (ind_X) -NZCV
-        AddMemToAccWithCarry(GetComplexAddress(Addressing::ind_X, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        AddMemToAccWithCarry((memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256));
         break;
     }
     /* case 0x62: break;
@@ -587,7 +624,13 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
     /* case 0x6b: break; */
     case 0x6c: {  // JMP (ind) --
-        pc = GetComplexAddress(Addressing::ind, GetImmediateAddress());
+        uint16_t addr = GetImmediateAddress();
+        uint8_t low = (addr & 0xFF);
+        low += 1;
+        low = static_cast<uint8_t>(low);
+        uint8_t high = (addr >> 8);
+        uint16_t new_addr = (high << 8) | low;
+        pc = (memory->Read(new_addr) << 8) | memory->Read(addr);
         increment_pc = false;
         break;
     }
@@ -606,13 +649,18 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         increment_pc = false;
         pc += 2;
         if (flags[Flags::overflow]) {
-            pc += static_cast<int8_t>(memory->Read(pc - 1));
+            ++cycles;
+            uint16_t abs = pc + static_cast<int8_t>(memory->Read(pc - 1));
+            cycles += ((abs & 0xFF00) != (pc & 0xFF00));
+            pc = abs;
             break;
         }
         break;
     }
     case 0x71: {  // ADC (ind_Y) -NZCV
-        AddMemToAccWithCarry(GetComplexAddress(Addressing::ind_Y, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        cycles += ((addr + 1) > 0xFF);
+        AddMemToAccWithCarry(((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y);
         break;
     }
     /* case 0x72: break;
@@ -628,11 +676,14 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
     /* case 0x77: break; */
     case 0x78: {  // SEI -I
-        flags[Flags::interrupt] = false;
+        flags[Flags::interrupt] = true;
         break;
     }
     case 0x79: {  // ADC (abs_Y) -NZCV
-        AddMemToAccWithCarry(GetImmediateAddress() + Y);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_y = abs + Y;
+        cycles += ((abs & 0xFF) != (abs_y & 0xFF));
+        AddMemToAccWithCarry(abs_y);
         pc += 1;
         break;
     }
@@ -640,7 +691,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0x7b: break;
     case 0x7c: break; */
     case 0x7d: {  // ADC (abs_X) -NZCV
-        AddMemToAccWithCarry(GetImmediateAddress() + X);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_x = abs + X;
+        cycles += ((abs & 0xFF) != (abs_x & 0xFF));
+        AddMemToAccWithCarry(abs_x);
         pc += 1;
         break;
     }
@@ -652,7 +706,8 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     /* case 0x7f: break;
     case 0x80: break; */
     case 0x81: {  // STA (ind_X) --
-        memory->Write(GetComplexAddress(Addressing::ind_X, memory->Read(pc + 1)), A);
+        uint16_t addr = memory->Read(pc + 1);
+        memory->Write((memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256), A);
         pc += 1;
         break;
     }
@@ -708,13 +763,17 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         increment_pc = false;
         pc += 2;
         if (!flags[Flags::carry]) {
-            pc += static_cast<int8_t>(memory->Read(pc - 1));
+            ++cycles;
+            uint16_t abs = pc + static_cast<int8_t>(memory->Read(pc - 1));
+            cycles += ((abs & 0xFF00) != (pc & 0xFF00));
+            pc = abs;
             break;
         }
         break;
     }
     case 0x91: {  // STA (ind_Y) --
-        memory->Write(GetComplexAddress(Addressing::ind_Y, memory->Read(pc + 1)), A);
+        uint16_t addr = memory->Read(pc + 1);
+        memory->Write(((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y, A);
         pc += 1;
         break;
     }
@@ -768,7 +827,8 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0xa1: {  // LDA (ind_X) -NZ
-        A = memory->Read(GetComplexAddress(Addressing::ind_X, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        A = memory->Read((memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256));
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -850,13 +910,18 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         increment_pc = false;
         pc += 2;
         if (flags[Flags::carry]) {
-            pc += static_cast<int8_t>(memory->Read(pc - 1));
+            ++cycles;
+            uint16_t abs = pc + static_cast<int8_t>(memory->Read(pc - 1));
+            cycles += ((abs & 0xFF00) != (pc & 0xFF00));
+            pc = abs;
             break;
         }
         break;
     }
     case 0xb1: {  // LDA (ind_Y) -NZ
-        A = memory->Read(GetComplexAddress(Addressing::ind_Y, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        cycles += ((addr + 1) > 0xFF);
+        A = memory->Read(((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -891,7 +956,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0xb9: {  // LDA (abs_Y) -NZ
-        A = memory->Read(GetImmediateAddress() + Y);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_y = abs + Y;
+        cycles += ((abs & 0xFF) != (abs_y & 0xFF));
+        A = memory->Read(abs_y);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;
@@ -912,7 +980,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0xbd: {  // LDA (abs_X) -NZ
-        A = memory->Read(GetImmediateAddress() + X);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_x = abs + X;
+        cycles += ((abs & 0xFF) != (abs_x & 0xFF));
+        A = memory->Read(abs_x);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;
@@ -931,7 +1002,8 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0xc1: {  // CMP (ind_X) -NZC
-        CompareWithMemory(A, GetComplexAddress(Addressing::ind_X, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        CompareWithMemory(A, (memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256));
         break;
     }
     /* case 0xc2: break;
@@ -999,13 +1071,18 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         increment_pc = false;
         pc += 2;
         if (!flags[Flags::zero]) {
-            pc += static_cast<int8_t>(memory->Read(pc - 1));
+            ++cycles;
+            uint16_t abs = pc + static_cast<int8_t>(memory->Read(pc - 1));
+            cycles += ((abs & 0xFF00) != (pc & 0xFF00));
+            pc = abs;
             break;
         }
         break;
     }
     case 0xd1: {  // CMP (ind_Y) -NZC
-        CompareWithMemory(A, GetComplexAddress(Addressing::ind_Y, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        cycles += ((addr + 1) > 0xFF);
+        CompareWithMemory(A, ((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y);
         break;
     }
     /* case 0xd2: break;
@@ -1032,7 +1109,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0xd9: {  // CMP (abs_Y) -NZC
-        CompareWithMemory(A, GetImmediateAddress() + Y);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_y = abs + Y;
+        cycles += ((abs & 0xFF) != (abs_y & 0xFF));
+        CompareWithMemory(A, abs_y);
         pc += 1;
         break;
     }
@@ -1040,7 +1120,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0xdb: break;
     case 0xdc: break; */
     case 0xdd: {  // CMP (abs_X) -NZC
-        CompareWithMemory(A, GetImmediateAddress() + X);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_x = abs + X;
+        cycles += ((abs & 0xFF) != (abs_x & 0xFF));
+        CompareWithMemory(A, abs_x);
         pc += 1;
         break;
     }
@@ -1061,7 +1144,8 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0xe1: {  // SBC (ind_X) -NZCV
-        SubMemFromAccWithBorrow(GetComplexAddress(Addressing::ind_X, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        SubMemFromAccWithBorrow((memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256));
         break;
     }
     /* case 0xe2: break;
@@ -1124,13 +1208,18 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         increment_pc = false;
         pc += 2;
         if (flags[Flags::zero]) {
-            pc += static_cast<int8_t>(memory->Read(pc - 1));
+            ++cycles;
+            uint16_t abs = pc + static_cast<int8_t>(memory->Read(pc - 1));
+            cycles += ((abs & 0xFF00) != (pc & 0xFF00));
+            pc = abs;
             break;
         }
         break;
     }
     case 0xf1: {  // SBC (ind_Y) -NZCV
-        SubMemFromAccWithBorrow(GetComplexAddress(Addressing::ind_Y, memory->Read(pc + 1)));
+        uint16_t addr = memory->Read(pc + 1);
+        cycles += ((addr + 1) > 0xFF);
+        SubMemFromAccWithBorrow(((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y);
         break;
     }
     /* case 0xf2: break;
@@ -1156,7 +1245,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0xf9: {  // SBC (abs_Y) -NZCV
-        SubMemFromAccWithBorrow(GetImmediateAddress() + Y);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_y = abs + Y;
+        cycles += ((abs & 0xFF) != (abs_y & 0xFF));
+        SubMemFromAccWithBorrow(abs_y);
         pc += 1;
         break;
     }
@@ -1164,7 +1256,10 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0xfb: break;
     case 0xfc: break; */
     case 0xfd: {  // SBC (abs_X) -NZCV
-        SubMemFromAccWithBorrow(GetImmediateAddress() + X);
+        uint16_t abs = GetImmediateAddress();
+        uint16_t abs_x = abs + X;
+        cycles += ((abs & 0xFF) != (abs_x & 0xFF));
+        SubMemFromAccWithBorrow(abs_x);
         pc += 1;
         break;
     }
@@ -1186,8 +1281,9 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         log_helper.AddLog("\nUnimplemented instruction " + std::string(unimpl_instr));
     }
 
+    cycles += cycle_lut[instr];
+
     if (increment_pc) {
         pc += 1;
     }
-    // TODO: add cycle counter
 }

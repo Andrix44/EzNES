@@ -113,19 +113,19 @@ int main(int argc, char* argv[]){
                 cpu.pc = 0xC000;
             }
             if (ImGui::Button("Step")) {
-                cpu.ExecuteCycles(1);
+                cpu.ExecuteInstructions(1);
             }
             if (ImGui::Button("Step * 10")) {
-                cpu.ExecuteCycles(10);
+                cpu.ExecuteInstructions(10);
             }
             if (ImGui::Button("Step * 100")) {
-                cpu.ExecuteCycles(100);
+                cpu.ExecuteInstructions(100);
             }
             if (ImGui::Button("Step * 1000")) {
-                cpu.ExecuteCycles(1000);
+                cpu.ExecuteInstructions(1000);
             }
             if (ImGui::Button("Step * 10000")) {
-                cpu.ExecuteCycles(10000);
+                cpu.ExecuteInstructions(10000);
             }
             ImGui::Separator();
 
@@ -136,6 +136,7 @@ int main(int argc, char* argv[]){
                         "PC = 0x%X \n"
                         "SP = 0x%X \n",
                         cpu.A, cpu.X, cpu.Y, cpu.pc, cpu.sp + 0x100);
+            ImGui::Text("Total cycles: %d", cpu.cycles);
             ImGui::Text("Flags:");
             for (int i = 0; i < 8; ++i) {
                 if (cpu.flags[7L - i]) {  // Reverse the order here so that the displayed flags are more readable

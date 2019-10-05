@@ -24,6 +24,8 @@ public:
     uint8_t Read(const uint16_t addr);  // Maybe make a little-endian double read?
     void Write(const uint16_t addr, const uint8_t byte);
 
+    std::string rom_path = "";
+
 private:
     std::vector<uint8_t> cpu_memory = {};
     std::vector<uint8_t> ppu_memory = {};

@@ -88,6 +88,12 @@ int main(int argc, char* argv[]){
                 if (ImGui::MenuItem("Pause - Unimplemented", "", false)) {
                     // TODO
                 }
+                if (ImGui::MenuItem("Reload", "", false)) {
+                    if (mem.rom_path.size() != 0) {
+                        mem.LoadROM(mem.rom_path.c_str());
+                        cpu.Reset();
+                    }
+                }
                 if (ImGui::MenuItem("Stop - Unimplemented", "", false)) {
                     // TODO
                 }
@@ -187,8 +193,8 @@ bool LoadROM(Memory& mem, Cpu& cpu) {
     if (file.empty()) {
         return false;
     }
-    std::string rom = file[0];
-    if (!mem.LoadROM(rom.c_str())) {
+    mem.rom_path = file[0];
+    if (!mem.LoadROM(mem.rom_path.c_str())) {
         if (!mem.SetupMapper()) {
             cpu.memory = &mem;
             cpu.Reset();

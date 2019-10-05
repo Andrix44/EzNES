@@ -183,7 +183,11 @@ int main(int argc, char* argv[]){
 }
 
 bool LoadROM(Memory& mem, Cpu& cpu) {
-    std::string rom = pfd::open_file("Select a file", ".", { "NES ROMS", "*" }).result()[0];
+    std::vector<std::string> file = pfd::open_file("Select a file", ".", { "NES ROMS", "*" }).result();
+    if (file.empty()) {
+        return false;
+    }
+    std::string rom = file[0];
     if (!mem.LoadROM(rom.c_str())) {
         if (!mem.SetupMapper()) {
             cpu.memory = &mem;

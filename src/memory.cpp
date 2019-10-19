@@ -15,7 +15,7 @@ bool Memory::LoadROM(const char* location) {
     if (fopen_s(&input_ROM, location, "rb")) {
         log_helper.AddLog("Error while opening ROM!\n");
     }
-    log_helper.AddLog("Loading ROM at " + static_cast<std::string>(location) + "\n");
+    log_helper.AddLog("\nLoading ROM at " + static_cast<std::string>(location) + "\n");
     // TODO: add more error checking
 
     if (ReadHeader()) {

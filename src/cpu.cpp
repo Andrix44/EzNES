@@ -18,11 +18,12 @@ void Cpu::Reset() {
     sp = 0xFD;
     flags = 0b00100100;
     cycles = 0;
-    cycles += 8;
+    cycles += 7;
 }
 
 void Cpu::IRQ() {
     if (!flags[Flags::interrupt]) {
+        log_helper.AddLog("IRQ");
         memory->Write(sp + 0x100, pc >> 8);
         --sp;
         memory->Write(sp + 0x100, pc & 0xFF);
@@ -40,6 +41,7 @@ void Cpu::IRQ() {
 }
 
 void Cpu::NMI() {
+    log_helper.AddLog("NMI");
     memory->Write(sp + 0x100, pc >> 8);
     --sp;
     memory->Write(sp + 0x100, pc & 0xFF);
@@ -117,8 +119,7 @@ void Cpu::RotateRightWithFlags(const uint16_t addr) {
 void Cpu::AddMemToAccWithCarry(const uint16_t addr) {
     uint8_t val = memory->Read(addr);
     uint16_t result = A + val + flags[Flags::carry];
-    flags[Flags::overflow] = (((A ^ result) & ~(A ^ val)) >> 7);  // TODO: does this work as intended?
-    // flags[Flags::overflow] = (((A ^ result) & (val ^ result)) >> 7);
+    flags[Flags::overflow] = (((A ^ result) & (val ^ result)) & 0x80);
     A = static_cast<uint8_t>(result);
     flags[Flags::negative] = (A >> 7);
     flags[Flags::zero] = (A == 0);
@@ -127,14 +128,23 @@ void Cpu::AddMemToAccWithCarry(const uint16_t addr) {
 }
 
 void Cpu::SubMemFromAccWithBorrow(const uint16_t addr) {
-    uint8_t val = memory->Read(addr);
+    uint8_t val = ~(memory->Read(addr));
+    uint16_t result = A + val + flags[Flags::carry];
+    flags[Flags::overflow] = (((A ^ result) & (val ^ result)) & 0x80);  // TODO: does this work as intended?
+    A = static_cast<uint8_t>(result);
+    flags[Flags::negative] = (A >> 7);
+    flags[Flags::zero] = (A == 0);
+    flags[Flags::carry] = (result >> 8);
+    pc += 1;
+
+    /* uint8_t val = memory->Read(addr);  //  TODO: original, maybe this is the right one
     uint16_t result = A - val - !flags[Flags::carry];
     flags[Flags::overflow] = (((A ^ result) & (~val ^ result)) >> 7);
     A = static_cast<uint8_t>(result);  // TODO: does this work as intended?
     flags[Flags::negative] = (A >> 7);
     flags[Flags::zero] = (A == 0);
     flags[Flags::carry] = !(result >> 8);
-    pc += 1;
+    pc += 1; */
 }
 
 void Cpu::CompareWithMemory(const uint8_t byte, const uint16_t addr) {
@@ -156,6 +166,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
 
     switch (instr) {
     case 0x00: {  // BRK -I
+        log_helper.AddLog("BRK");
         pc += 1;
         memory->Write(sp + 0x100, pc >> 8);
         --sp;
@@ -196,8 +207,9 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
     // case 0x07: break;
     case 0x08: {  // PHP --
-        flags[Flags::interrupt] = true;
+        flags[Flags::breakpoint] = true;
         Push(static_cast<uint8_t>(flags.to_ulong()));
+        flags[Flags::breakpoint] = false;
         break;
     }
     case 0x09: {  // ORA (imm) -NZ
@@ -308,7 +320,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     }
     case 0x21: {  // AND (ind_X) -NZ
         uint16_t addr = memory->Read(pc + 1);
-        A |= memory->Read((memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256));
+        A &= memory->Read((memory->Read((addr + X + 1) % 256) << 8) | memory->Read((addr + X) % 256));
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -325,7 +337,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0x25: {  // AND (zpg) -NZ
-        A |= memory->Read(memory->Read(pc + 1));
+        A &= memory->Read(memory->Read(pc + 1));
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -342,7 +354,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0x29: {  // AND (imm) -NZ
-        A |= memory->Read(pc + 1);
+        A &= memory->Read(pc + 1);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -368,7 +380,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         break;
     }
     case 0x2d: {  // AND (abs) -NZ
-        A |= memory->Read(GetImmediateAddress());
+        A &= memory->Read(GetImmediateAddress());
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;
@@ -395,7 +407,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0x31: {  // AND (ind_Y) -NZ
         uint16_t addr = memory->Read(pc + 1);
         cycles += ((addr + 1) > 0xFF);
-        A |= memory->Read(((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y);
+        A &= memory->Read(((memory->Read((addr + 1) % 256) << 8) | memory->Read(addr)) + Y);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -405,7 +417,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     case 0x33: break;
     case 0x34: break; */
     case 0x35: {  // AND (zpg_X) -NZ
-        A |= memory->Read((memory->Read(pc + 1) + X) % 256);
+        A &= memory->Read((memory->Read(pc + 1) + X) % 256);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 1;
@@ -424,7 +436,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         uint16_t abs = GetImmediateAddress();
         uint16_t abs_y = abs + Y;
         cycles += ((abs & 0xFF) != (abs_y & 0xFF));
-        A |= memory->Read(abs_y);
+        A &= memory->Read(abs_y);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;
@@ -437,7 +449,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
         uint16_t abs = GetImmediateAddress();
         uint16_t abs_x = abs + X;
         cycles += ((abs & 0xFF) != (abs_x & 0xFF));
-        A |= memory->Read(abs_x);
+        A &= memory->Read(abs_x);
         flags[Flags::negative] = (A >> 7);
         flags[Flags::zero] = (A == 0);
         pc += 2;

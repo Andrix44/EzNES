@@ -59,15 +59,14 @@ inline uint16_t Cpu::GetImmediateAddress() {
     return (memory->Read(pc + 2) << 8) | memory->Read(pc + 1);
 }
 
-void Cpu::Push(const uint8_t byte) {
-    --sp;
+inline void Cpu::Push(const uint8_t byte) {
     memory->Write(sp + 0x100, byte);
+    --sp;
 }
 
-uint8_t Cpu::Pop() {
-    uint8_t temp = memory->Read(sp + 0x100);
+inline uint8_t Cpu::Pop() {
     ++sp;
-    return temp;
+    return memory->Read(sp + 0x100);
 }
 
 void Cpu::ShiftLeftWithFlags(const uint16_t addr) {
@@ -302,7 +301,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
     //case 0x1f: break;
     case 0x20: {  // JSR --
         Push((pc + 2) >> 8);
-        Push((pc + 2) & 0xFF);  // MAYBE the other way around???
+        Push((pc + 2) & 0xFF);
         pc = GetImmediateAddress();
         increment_pc = false;
         break;

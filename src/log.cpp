@@ -1,11 +1,6 @@
 #include "log.h"
 
 
-Logging::Logging() {
-    bool scroll_enabled = true;
-    bool scroll_to_bottom = false;
-}
-
 void Logging::AddLog(std::string entry) {
     buff.append(entry.c_str());
     if (scroll_enabled) {

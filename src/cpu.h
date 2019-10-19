@@ -35,7 +35,7 @@ public:
     void IRQ();
     void NMI();
 
-    Memory* memory;
+    Memory* memory = nullptr;
 
     uint8_t A = 0x00, X = 0x00, Y = 0x00;
     uint8_t sp = 0x0;
@@ -70,8 +70,8 @@ public:
 private:
     void Interpreter(const uint8_t instr);
     inline uint16_t GetImmediateAddress();
-    void Push(const uint8_t byte);
-    uint8_t Pop();
+    inline void Push(const uint8_t byte);
+    inline uint8_t Pop();
     void ShiftLeftWithFlags(const uint16_t addr);
     void ShiftRightWithFlags(const uint16_t addr);
     void RotateLeftWithFlags(const uint16_t addr);

@@ -33,9 +33,7 @@ bool Memory::LoadROM(const char* location) {
 bool Memory::ReadHeader() {
     fread(&header[0], 1, HEADER_SIZE, input_ROM);
 
-    if (header[0] == (int)"N"[0] && header[1] == (int)"E"[0] && header[2] == (int)"S"[0] && header[3] == 0x1A) {
-        log_helper.AddLog("Compatible format detected!\n");
-    } else {
+    if (!(header[0] == (int)"N"[0] && header[1] == (int)"E"[0] && header[2] == (int)"S"[0] && header[3] == 0x1A)) {
         log_helper.AddLog("Unknown file format!\n");
         return true;
     }
@@ -51,7 +49,13 @@ bool Memory::ReadHeader() {
     }
     if (!NES_ver_2) {  // iNES header
         prg_rom_size = (header[4]) * 0x4000;
-        chr_rom_size = (header[5]) * 0x2000;  // 0 means that CHR RAM is being used
+        if (header[5] == 0) {
+            chr_ram_size = 0x2000;
+            chr_rom_size = 0;
+        } else {
+            chr_ram_size = 0;
+            chr_rom_size = (header[5]) * 0x2000;
+        }
         mirroring = (header[6] & 0x1) ? vertical : horizontal;
         prg_ram_battery = header[6] & 0x2;
         trainer = header[6] & 0x4;

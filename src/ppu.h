@@ -3,6 +3,12 @@
 #include "memory.h"
 
 class Ppu {
-private:
+public:
     Memory* memory = nullptr;
+    int scanline = 0;
+    int cycle = 0;
+
+    void Run();
+private:
+    bool frame_done;
 };

@@ -1,15 +1,13 @@
 #include "cpu.h"
 
 
-void Cpu::ExecuteInstructions(const uint32_t count) {
+void Cpu::Run() {
     if (!flags[Flags::unused]) {  // Prevents an access violation if some of the buttons are pressed before a rom is loaded
         return;
     }
-    for (uint32_t i = 0; i < count; i++) {
-        instr = memory->Read(pc);
-        Interpreter(instr);
-        flags[Flags::unused] = true;  // TODO: maybe this is not right
-    }
+    instr = memory->Read(pc);
+    Interpreter(instr);
+    flags[Flags::unused] = true;
 }
 
 void Cpu::Reset() {

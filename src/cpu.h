@@ -30,7 +30,7 @@ enum class Addressing {
 
 class Cpu {
 public:
-    void ExecuteInstructions(const uint32_t cycles);
+    void Run();
     void Reset();
     void IRQ();
     void NMI();

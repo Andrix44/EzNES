@@ -153,6 +153,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\mappers\nrom.cpp" />
     <ClCompile Include="src\memory.cpp" />
+    <ClCompile Include="src\ppu.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\glad\glad.h" />
@@ -173,6 +174,7 @@
     <ClInclude Include="src\mappers\mapper.h" />
     <ClInclude Include="src\mappers\nrom.h" />
     <ClInclude Include="src\memory.h" />
+    <ClInclude Include="src\ppu.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

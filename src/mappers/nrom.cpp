@@ -22,3 +22,7 @@ uint16_t NROM::TranslateAddress(const uint16_t addr) {
         return addr;
     }
 }
+
+uint16_t NROM::TranslatePpuAddress(const uint16_t addr) {
+    return addr;
+}

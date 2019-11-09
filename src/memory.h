@@ -10,9 +10,9 @@
 #include <mappers/nrom.h>
 
 
-constexpr uint8_t HEADER_SIZE = 0x10;
-constexpr uint32_t CPU_MEMORY_SIZE = 0x10000;
-constexpr uint16_t PPU_MEMORY_SIZE = 0x4000;
+constexpr int HEADER_SIZE = 0x10;
+constexpr int CPU_MEMORY_SIZE = 0x10000;
+constexpr int PPU_MEMORY_SIZE = 0x4000;
 
 class Memory {
 public:
@@ -21,8 +21,10 @@ public:
     bool LoadROM(const char* location);
     bool ReadHeader();
     bool SetupMapper();
-    uint8_t Read(const uint16_t addr);  // Maybe make a little-endian double read?
+    uint8_t Read(const uint16_t addr);
     void Write(const uint16_t addr, const uint8_t byte);
+    uint8_t PpuRead(const uint16_t addr);
+    void PpuWrite(const uint16_t addr, const uint8_t byte);
 
     std::string rom_path = "";
 

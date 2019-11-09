@@ -4,7 +4,8 @@
 
 
 Memory::Memory() {
-    cpu_memory.resize(0x10000);
+    cpu_memory.resize(CPU_MEMORY_SIZE);
+    ppu_memory.resize(PPU_MEMORY_SIZE);
 }
 
 Memory::~Memory() {
@@ -163,13 +164,10 @@ uint8_t Memory::Read(const uint16_t addr) {
         ret = cpu_memory[curr_mapper->TranslateAddress(addr)];
     }
 
-    // printf("Read at 0x%X, value = 0x%X \n", addr, ret);
     return ret;
 }
 
 void Memory::Write(const uint16_t addr, const uint8_t byte) {
-    // printf("Write at 0x%X, value = 0x%X \n", addr, byte);
-
     if (addr <= 0x1FFF) {
         cpu_memory[addr] = byte;
     }
@@ -180,5 +178,46 @@ void Memory::Write(const uint16_t addr, const uint8_t byte) {
 
     else {
         cpu_memory[curr_mapper->TranslateAddress(addr)] = byte;
+    }
+}
+
+uint8_t Memory::PpuRead(const uint16_t addr) {
+    assert(addr <= 0x3FFF);
+    uint8_t ret = NULL;
+
+    if (addr <= 0x1FFF) {
+        ret = ppu_memory[curr_mapper->TranslatePpuAddress(addr)];
+    }
+
+    else if (addr >= 0x2000 && addr <= 0x2FFF) {
+        ret = ppu_memory[addr];
+    }
+
+    else if (addr >= 0x3000 && addr <= 0x3EFF) {
+        ret = ppu_memory[addr - 0x1000LL];
+    }
+
+    else {
+        ret = ppu_memory[addr & 0x3F1F];
+    }
+
+    return ret;
+}
+
+void Memory::PpuWrite(const uint16_t addr, const uint8_t byte) {
+    if (addr <= 0x1FFF) {
+        ppu_memory[curr_mapper->TranslatePpuAddress(addr)] = byte;
+    }
+
+    else if (addr >= 0x2000 && addr <= 0x2FFF) {
+        ppu_memory[addr] = byte;
+    }
+
+    else if (addr >= 0x3000 && addr <= 0x3EFF) {
+        ppu_memory[addr - 0x1000LL] = byte;
+    }
+
+    else {
+        ppu_memory[addr & 0x3F1F] = byte;
     }
 }

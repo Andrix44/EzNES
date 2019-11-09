@@ -11,12 +11,14 @@
 
 #include "cpu.h"
 #include "memory.h"
-//#include "ppu.h"
+#include "ppu.h"
 
 #include <log.h>
 
+constexpr int display_width = 256;
+constexpr int display_height = 240;
 
-bool LoadROM(Memory& mem, Cpu& cpu);
+bool LoadROM(Memory& mem, Cpu& cpu, Ppu& ppu);
 
 int main(int argc, char* argv[]){
     if (!glfwInit()) {
@@ -54,12 +56,13 @@ int main(int argc, char* argv[]){
     ImGui_ImplOpenGL3_Init("#version 330");
 
     Memory mem;
-    //Ppu ppu;
+    Ppu ppu;
     Cpu cpu;
 
     bool show_log_window = true;
     bool show_demo_window = false;
     bool show_debug_window = true;
+    bool show_pattern_table = true;
 
     ImVec4 red = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
     ImVec4 green = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
@@ -103,6 +106,20 @@ int main(int argc, char* argv[]){
             ImGui::MenuItem("Show/hide debug window", "CTRL+D", &show_debug_window);
             ImGui::MenuItem("Show/hide demo window", "", &show_demo_window);
             ImGui::EndMainMenuBar();
+        }
+
+        {
+            ImGui::Begin("Game");
+            ImGui::Image(nullptr, ImVec2(display_width, display_height));
+            ImGui::End();
+        }
+
+        if(show_pattern_table) {
+            ImGui::Begin("Pattern table");
+            ImGui::Image(nullptr, ImVec2(128, 128));
+            ImGui::SameLine();
+            ImGui::Image(nullptr, ImVec2(128, 128));
+            ImGui::End();
         }
 
         if (show_log_window) {
@@ -188,7 +205,7 @@ int main(int argc, char* argv[]){
     return 0;
 }
 
-bool LoadROM(Memory& mem, Cpu& cpu) {
+bool LoadROM(Memory& mem, Cpu& cpu, Ppu& ppu) {
     std::vector<std::string> file = pfd::open_file("Select a file", ".", { "NES ROMS", "*" }).result();
     if (file.empty()) {
         return false;
@@ -197,6 +214,7 @@ bool LoadROM(Memory& mem, Cpu& cpu) {
     if (!mem.LoadROM(mem.rom_path.c_str())) {
         if (!mem.SetupMapper()) {
             cpu.memory = &mem;
+            ppu.memory = &mem;
             cpu.Reset();
             return true;
         }

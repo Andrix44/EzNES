@@ -10,5 +10,5 @@ public:
 
     void Run();
 private:
-    bool frame_done;
+    bool frame_done = false;
 };

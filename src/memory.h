@@ -47,7 +47,7 @@ private:
           nametable mirroring type----|*/
     bool prg_ram_battery = false;
     bool trainer = false;
-    enum Mirroring {
+    enum class Mirroring {
         horizontal = 0,
         vertical
     } mirroring{};
@@ -55,13 +55,13 @@ private:
     uint8_t submapper = NULL;
     uint32_t prg_ram_size = NULL, eeprom_size = NULL;
     uint32_t chr_ram_size = NULL, chr_nvram_size = NULL;
-    enum ConsoleType {
+    enum class ConsoleType {
         nes_famicom = 0,
         vs_system,
         playchoice,
         extended
     } console_type{};
-    enum Region {
+    enum class Region {
         ntsc = 0,
         pal,
         multi,

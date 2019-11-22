@@ -57,7 +57,7 @@ bool Memory::ReadHeader() {
             chr_ram_size = 0;
             chr_rom_size = (header[5]) * 0x2000;
         }
-        mirroring = (header[6] & 0x1) ? vertical : horizontal;
+        mirroring = (header[6] & 0x1) ? Mirroring::vertical : Mirroring::horizontal;
         prg_ram_battery = header[6] & 0x2;
         trainer = header[6] & 0x4;
         flags_6 = header[6];  // This can be separated later
@@ -70,22 +70,22 @@ bool Memory::ReadHeader() {
         else {
             switch (header[7] & 0x3) { // Can probably be ignored
             case 0:
-                console_type = nes_famicom;
+                console_type = ConsoleType::nes_famicom;
             case 1:
-                console_type = vs_system;
+                console_type = ConsoleType::vs_system;
             case 2:
-                console_type = playchoice;
+                console_type = ConsoleType::playchoice;
             case 3:
-                console_type = extended;
+                console_type = ConsoleType::extended;
             }
 
             prg_ram_size = (header[8]) * 8192;
 
             switch (header[9] & 0x1) { // Maybe this should be ignored
             case 0:
-                region = ntsc;
+                region = Region::ntsc;
             case 1:
-                region = pal;
+                region = Region::pal;
             }
 
             // header[10] is mostly unused

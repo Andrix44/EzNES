@@ -60,6 +60,9 @@ int main(int argc, char* argv[]){
     Ppu ppu;
     Cpu cpu;
 
+	cpu.memory = &mem;
+	ppu.memory = &mem;
+
     bool show_log_window = true;
     bool show_demo_window = false;
     bool show_debug_window = true;
@@ -225,8 +228,6 @@ bool LoadROM(Memory& mem, Cpu& cpu, Ppu& ppu) {
     mem.rom_path = file[0];
     if (!mem.LoadROM(mem.rom_path.c_str())) {
         if (!mem.SetupMapper()) {
-            cpu.memory = &mem;
-            ppu.memory = &mem;
             cpu.Reset();
             return true;
         }

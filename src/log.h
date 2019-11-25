@@ -10,6 +10,7 @@ public:
     bool scroll_enabled = true;
 
     void AddLog(std::string entry);
+    void Clear();
     void Draw(bool *show_log_window);
 
 private:

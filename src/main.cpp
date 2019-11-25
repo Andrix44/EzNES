@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <ctime>
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
@@ -13,13 +14,14 @@
 #include "memory.h"
 #include "ppu.h"
 
-#include <log.h>
+#include "log.h"
 
 constexpr int display_width = 256;
 constexpr int display_height = 240;
 
 bool LoadROM(Memory& mem, Cpu& cpu, Ppu& ppu);
-void RunNES(int count, Cpu& cpu, Ppu& ppu);
+void Clock(Cpu& cpu, Ppu& ppu);
+void Frame(bool emulation_running, double elapsed_time, Cpu& cpu, Ppu& ppu);
 
 int main(int argc, char* argv[]){
     if (!glfwInit()) {
@@ -63,7 +65,11 @@ int main(int argc, char* argv[]){
 	cpu.memory = &mem;
 	ppu.memory = &mem;
 
-    bool show_log_window = true;
+    bool emulation_running = false;
+    double elapsed_time = 0;
+    std::clock_t begin = 0, end = 0;
+
+    bool show_log_window = false;
     bool show_demo_window = false;
     bool show_debug_window = true;
     bool show_pattern_table = true;
@@ -74,14 +80,21 @@ int main(int argc, char* argv[]){
     std::string flag_names[8] = { "Carry", "Zero", "Interrupt", "BCD", "Breakpoint", "-", "Overflow", "Negative" };
 
     while (!glfwWindowShouldClose(window)) {
+        elapsed_time = std::fmod(std::difftime(end, begin) / CLOCKS_PER_SEC, 0.016f);
+        // Windows is using wall time for clock() and without the fmod() stuff would break during debugging
+        // It also assumes that we are running above NES speeds
+        begin = std::clock();
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        Frame(emulation_running, elapsed_time, cpu, ppu);
+
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Load ROM", "", false)) {
-                    LoadROM(mem, cpu, ppu);
+                    emulation_running = LoadROM(mem, cpu, ppu);
                 }
                 if (ImGui::MenuItem("Exit", "", false)) {
                     glfwSetWindowShouldClose(window, 1);
@@ -89,11 +102,11 @@ int main(int argc, char* argv[]){
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Emulation")) {
-                if (ImGui::MenuItem("Resume - Unimplemented", "", false)) {
-                    // TODO
+                if (ImGui::MenuItem("Resume", "", false)) {
+                    emulation_running = true;
                 }
-                if (ImGui::MenuItem("Pause - Unimplemented", "", false)) {
-                    // TODO
+                if (ImGui::MenuItem("Pause", "", false)) {
+                    emulation_running = false;
                 }
                 if (ImGui::MenuItem("Reload", "", false)) {
                     if (mem.rom_path.size() != 0) {
@@ -130,6 +143,11 @@ int main(int argc, char* argv[]){
             ImGui::Begin("Log", &show_log_window);
             ImGui::Checkbox("Autoscroll", &log_helper.scroll_enabled);
             ImGui::SameLine();
+            ImGui::Checkbox("Log instructions", &cpu.log_instr);
+            ImGui::SameLine();
+            if(ImGui::Button("Clear log")) {
+                log_helper.Clear();
+            }
             log_helper.Draw(&show_log_window);
             ImGui::End();
         }
@@ -140,24 +158,16 @@ int main(int argc, char* argv[]){
                 cpu.pc = 0xC000;
             }
             ImGui::SameLine();
+            if (ImGui::Button("Start")) {
+                emulation_running = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Stop")) {
+                emulation_running = false;
+            }
+            ImGui::SameLine();
             if (ImGui::Button("Step")) {
-                RunNES(1, cpu, ppu);
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Step * 10")) {
-                RunNES(10, cpu, ppu);
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Step * 100")) {
-                RunNES(100, cpu, ppu);
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Step * 1000")) {
-                RunNES(1000, cpu, ppu);
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Step * 10000")) {
-                RunNES(10000, cpu, ppu);
+                Clock(cpu, ppu); Clock(cpu, ppu); Clock(cpu, ppu);
             }
             ImGui::Separator();
 
@@ -209,6 +219,8 @@ int main(int argc, char* argv[]){
         glfwMakeContextCurrent(window);
         glfwSwapBuffers(window);
         glfwPollEvents();
+
+        end = std::clock();
     }
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -238,14 +250,32 @@ bool LoadROM(Memory& mem, Cpu& cpu, Ppu& ppu) {
     else {
         pfd::message("Error", "Invalid ROM file!", pfd::choice::ok, pfd::icon::error);
     }
+    mem.rom_path = "";
     return false;
 }
 
-void RunNES(int count, Cpu& cpu, Ppu& ppu) {
-    for (int i = 0; i <= count; ++i) {
+void Clock(Cpu& cpu, Ppu& ppu) {
+    static uint64_t clock_count = 0;
+    ppu.Run();
+    if (clock_count % 3 == 0) {
         cpu.Run();
-        ppu.Run();
-        ppu.Run();
-        ppu.Run();
+    }
+    ++clock_count;
+}
+
+void Frame(bool emulation_running, double elapsed_time ,Cpu& cpu, Ppu& ppu) {
+    if (emulation_running) {
+        static double time_left = 0;
+        if (time_left > 0.0f) {
+            time_left -= elapsed_time;
+        }
+        else {
+            time_left += (1.0f / 60.0f) - elapsed_time;
+            while (!ppu.frame_done) {
+                Clock(cpu, ppu);
+            }
+            ppu.frame_done = false;
+        }
+
     }
 }

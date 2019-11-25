@@ -8,6 +8,10 @@ void Logging::AddLog(std::string entry) {
     }
 }
 
+void Logging::Clear() {
+    buff.clear();
+}
+
 void Logging::Draw(bool *show_log_window) {
     if (!ImGui::Begin("Log", show_log_window)) {
         ImGui::End();

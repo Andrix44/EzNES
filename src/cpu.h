@@ -35,6 +35,7 @@ public:
     void IRQ();
     void NMI();
 
+    bool log_instr = false;
     Memory* memory = nullptr;
 
     uint8_t A = 0x00, X = 0x00, Y = 0x00;

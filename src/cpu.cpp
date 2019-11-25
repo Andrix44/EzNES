@@ -129,21 +129,12 @@ void Cpu::AddMemToAccWithCarry(const uint16_t addr) {
 void Cpu::SubMemFromAccWithBorrow(const uint16_t addr) {
     uint8_t val = ~(memory->Read(addr));
     uint16_t result = A + val + flags[Flags::carry];
-    flags[Flags::overflow] = (((A ^ result) & (val ^ result)) & 0x80);  // TODO: does this work as intended?
+    flags[Flags::overflow] = (((A ^ result) & (val ^ result)) & 0x80);
     A = static_cast<uint8_t>(result);
     flags[Flags::negative] = (A >> 7);
     flags[Flags::zero] = (A == 0);
     flags[Flags::carry] = (result >> 8);
     pc += 1;
-
-    /* uint8_t val = memory->Read(addr);  //  TODO: original, maybe this is the right one
-    uint16_t result = A - val - !flags[Flags::carry];
-    flags[Flags::overflow] = (((A ^ result) & (~val ^ result)) >> 7);
-    A = static_cast<uint8_t>(result);  // TODO: does this work as intended?
-    flags[Flags::negative] = (A >> 7);
-    flags[Flags::zero] = (A == 0);
-    flags[Flags::carry] = !(result >> 8);
-    pc += 1; */
 }
 
 void Cpu::CompareWithMemory(const uint8_t byte, const uint16_t addr) {
@@ -156,12 +147,13 @@ void Cpu::CompareWithMemory(const uint8_t byte, const uint16_t addr) {
 
 void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope that the compiler optimizes this into a jumptable
     bool increment_pc = true;
-
-    char instr_executed[5];
-    sprintf_s(&instr_executed[0], sizeof(instr_executed), "0x%X", memory->Read(pc));
-    char pc_char[7];
-    sprintf_s(&pc_char[0], sizeof(pc_char), "0x%X", pc);
-    log_helper.AddLog("\nExecuting instruction " + std::string(instr_executed) + " at address " + std::string(pc_char));
+    if (log_instr) {
+        char instr_executed[5];
+        sprintf_s(&instr_executed[0], sizeof(instr_executed), "0x%X", memory->Read(pc));
+        char pc_char[7];
+        sprintf_s(&pc_char[0], sizeof(pc_char), "0x%X", pc);
+        log_helper.AddLog("\nExecuting instruction " + std::string(instr_executed) + " at address " + std::string(pc_char));
+    }
 
     switch (instr) {
     case 0x00: {  // BRK -I

@@ -19,9 +19,7 @@ bool Memory::LoadROM(const char* location) {
     log_helper.AddLog("\nLoading ROM at " + static_cast<std::string>(location) + "\n");
     // TODO: add more error checking
 
-    if (ReadHeader()) {
-        return true; // Error occured
-    }
+    if (ReadHeader()) return true; // Error occured
     uint32_t romsize = HEADER_SIZE + prg_rom_size + chr_rom_size;
     game_data.resize(romsize);
     fseek(input_ROM, 0, SEEK_SET);
@@ -150,74 +148,39 @@ bool Memory::SetupMapper() {
 }
 
 uint8_t Memory::Read(const uint16_t addr) {
-    uint8_t ret = NULL;
+    if (addr <= 0x1FFF) return cpu_memory[addr & 0x7FF];
 
-    if (addr <= 0x1FFF) {
-        ret = cpu_memory[addr & 0x7FF];
-    }
+    else if (addr >= 0x2000 && addr <= 0x3FFF) return cpu_memory[(addr & 0x7) + 0x2000LL];
 
-    else if (addr >= 0x2000 && addr <= 0x3FFF) {
-        ret = cpu_memory[(addr & 0x7) + 0x2000LL];
-    }
-
-    else {
-        ret = cpu_memory[curr_mapper->TranslateAddress(addr)];
-    }
-
-    return ret;
+    else return cpu_memory[curr_mapper->TranslateAddress(addr)];
 }
 
 void Memory::Write(const uint16_t addr, const uint8_t byte) {
-    if (addr <= 0x1FFF) {
-        cpu_memory[addr] = byte;
-    }
+    if (addr <= 0x1FFF) cpu_memory[addr] = byte;
 
-    else if (addr >= 0x2000 && addr <= 0x3FFF) {
-        cpu_memory[(addr & 0x7) + 0x2000LL] = byte;
-    }
+    else if (addr >= 0x2000 && addr <= 0x3FFF) cpu_memory[(addr & 0x7) + 0x2000LL] = byte;
 
-    else {
-        cpu_memory[curr_mapper->TranslateAddress(addr)] = byte;
-    }
+    else cpu_memory[curr_mapper->TranslateAddress(addr)] = byte;
 }
 
 uint8_t Memory::PpuRead(const uint16_t addr) {
     assert(addr <= 0x3FFF);
-    uint8_t ret = NULL;
 
-    if (addr <= 0x1FFF) {
-        ret = ppu_memory[curr_mapper->TranslatePpuAddress(addr)];
-    }
+    if (addr <= 0x1FFF) return ppu_memory[curr_mapper->TranslatePpuAddress(addr)];
 
-    else if (addr >= 0x2000 && addr <= 0x2FFF) {
-        ret = ppu_memory[addr];
-    }
+    else if (addr >= 0x2000 && addr <= 0x2FFF) return ppu_memory[addr];
 
-    else if (addr >= 0x3000 && addr <= 0x3EFF) {
-        ret = ppu_memory[addr - 0x1000LL];
-    }
+    else if (addr >= 0x3000 && addr <= 0x3EFF) return ppu_memory[addr - 0x1000LL];
 
-    else {
-        ret = ppu_memory[addr & 0x3F1F];
-    }
-
-    return ret;
+    else return ppu_memory[addr & 0x3F1F];
 }
 
 void Memory::PpuWrite(const uint16_t addr, const uint8_t byte) {
-    if (addr <= 0x1FFF) {
-        ppu_memory[curr_mapper->TranslatePpuAddress(addr)] = byte;
-    }
+    if (addr <= 0x1FFF) ppu_memory[curr_mapper->TranslatePpuAddress(addr)] = byte;
 
-    else if (addr >= 0x2000 && addr <= 0x2FFF) {
-        ppu_memory[addr] = byte;
-    }
+    else if (addr >= 0x2000 && addr <= 0x2FFF) ppu_memory[addr] = byte;
 
-    else if (addr >= 0x3000 && addr <= 0x3EFF) {
-        ppu_memory[addr - 0x1000LL] = byte;
-    }
+    else if (addr >= 0x3000 && addr <= 0x3EFF) ppu_memory[addr - 0x1000LL] = byte;
 
-    else {
-        ppu_memory[addr & 0x3F1F] = byte;
-    }
+    else ppu_memory[addr & 0x3F1F] = byte;
 }

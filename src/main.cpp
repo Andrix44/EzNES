@@ -66,6 +66,7 @@ int main(int argc, char* argv[]){
 	ppu.memory = &mem;
 
     bool emulation_running = false;
+    bool run_immediately = true;
     double elapsed_time = 0;
     std::clock_t begin = 0, end = 0;
 
@@ -95,28 +96,21 @@ int main(int argc, char* argv[]){
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Load ROM", "", false)) {
                     emulation_running = LoadROM(mem, cpu, ppu);
+                    if (!run_immediately) emulation_running = false;
                 }
-                if (ImGui::MenuItem("Exit", "", false)) {
-                    glfwSetWindowShouldClose(window, 1);
-                }
+                if (ImGui::MenuItem("Exit", "", false)) glfwSetWindowShouldClose(window, 1);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Emulation")) {
-                if (ImGui::MenuItem("Resume", "", false)) {
-                    emulation_running = true;
-                }
-                if (ImGui::MenuItem("Pause", "", false)) {
-                    emulation_running = false;
-                }
+                if (ImGui::MenuItem("Resume", "", false)) emulation_running = true;
+                if (ImGui::MenuItem("Pause", "", false)) emulation_running = false;
                 if (ImGui::MenuItem("Reload", "", false)) {
                     if (mem.rom_path.size() != 0) {
                         mem.LoadROM(mem.rom_path.c_str());
                         cpu.Reset();
                     }
                 }
-                if (ImGui::MenuItem("Stop - Unimplemented", "", false)) {
-                    // TODO
-                }
+                if (ImGui::MenuItem("Stop - Unimplemented", "", false)) {} //TODO
                 ImGui::EndMenu();
             }
             ImGui::MenuItem("Show/hide log", "CTRL+L", &show_log_window);
@@ -145,30 +139,24 @@ int main(int argc, char* argv[]){
             ImGui::SameLine();
             ImGui::Checkbox("Log instructions", &cpu.log_instr);
             ImGui::SameLine();
-            if(ImGui::Button("Clear log")) {
-                log_helper.Clear();
-            }
+            if(ImGui::Button("Clear log")) log_helper.Clear();
             log_helper.Draw(&show_log_window);
             ImGui::End();
         }
 
         if (show_debug_window) {
             ImGui::Begin("Debug", &show_debug_window);
-            if (ImGui::Button("Jump to 0xC000")) {
-                cpu.pc = 0xC000;
-            }
+            if (ImGui::Button("Jump to 0xC000")) cpu.pc = 0xC000;
             ImGui::SameLine();
-            if (ImGui::Button("Start")) {
-                emulation_running = true;
-            }
+            if (ImGui::Button("Start")) emulation_running = true;
             ImGui::SameLine();
-            if (ImGui::Button("Stop")) {
-                emulation_running = false;
-            }
+            if (ImGui::Button("Stop")) emulation_running = false;
             ImGui::SameLine();
             if (ImGui::Button("Step")) {
                 Clock(cpu, ppu); Clock(cpu, ppu); Clock(cpu, ppu);
             }
+            ImGui::SameLine();
+            ImGui::Checkbox("Run immediately", &run_immediately);
             ImGui::Separator();
 
             ImGui::Text("CPU: \n"
@@ -181,12 +169,8 @@ int main(int argc, char* argv[]){
             ImGui::Text("Total cycles: %d", cpu.cycles);
             ImGui::Text("Flags:");
             for (int i = 0; i < 8; ++i) {
-                if (cpu.flags[7 - i]) {  // Reverse the order here so that the displayed flags are more readable
-                    color = green;
-                }
-                else {
-                    color = red;
-                }
+                if (cpu.flags[7 - i]) color = green;  // Reverse the order here so that the displayed flags are more readable
+                else color = red;
                 ImGui::SameLine();
                 ImGui::TextColored(color, flag_names[7 - i].c_str());  // Same
             }
@@ -202,9 +186,7 @@ int main(int argc, char* argv[]){
             ImGui::End();
         }
 
-        if (show_demo_window) {
-            ImGui::ShowDemoWindow(&show_demo_window);
-        }
+        if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
         ImGui::Render();
 
@@ -234,22 +216,16 @@ int main(int argc, char* argv[]){
 
 bool LoadROM(Memory& mem, Cpu& cpu, Ppu& ppu) {
     std::vector<std::string> file = pfd::open_file("Select a file", ".", { "NES ROMS", "*" }).result();
-    if (file.empty()) {
-        return false;
-    }
+    if (file.empty()) return false;
     mem.rom_path = file[0];
     if (!mem.LoadROM(mem.rom_path.c_str())) {
         if (!mem.SetupMapper()) {
             cpu.Reset();
             return true;
         }
-        else {
-            pfd::message("Error", "Unsupported mapper!", pfd::choice::ok, pfd::icon::error);
-        }
+        else pfd::message error("Error", "Unsupported mapper!", pfd::choice::ok, pfd::icon::error);
     }
-    else {
-        pfd::message("Error", "Invalid ROM file!", pfd::choice::ok, pfd::icon::error);
-    }
+    else pfd::message error("Error", "Invalid ROM file!", pfd::choice::ok, pfd::icon::error);
     mem.rom_path = "";
     return false;
 }
@@ -257,23 +233,17 @@ bool LoadROM(Memory& mem, Cpu& cpu, Ppu& ppu) {
 void Clock(Cpu& cpu, Ppu& ppu) {
     static uint64_t clock_count = 0;
     ppu.Run();
-    if (clock_count % 3 == 0) {
-        cpu.Run();
-    }
+    if (clock_count % 3 == 0) cpu.Run();
     ++clock_count;
 }
 
 void Frame(bool emulation_running, double elapsed_time ,Cpu& cpu, Ppu& ppu) {
     if (emulation_running) {
         static double time_left = 0;
-        if (time_left > 0.0f) {
-            time_left -= elapsed_time;
-        }
+        if (time_left > 0.0f) time_left -= elapsed_time;
         else {
             time_left += (1.0f / 60.0f) - elapsed_time;
-            while (!ppu.frame_done) {
-                Clock(cpu, ppu);
-            }
+            while (!ppu.frame_done) Clock(cpu, ppu);
             ppu.frame_done = false;
         }
 

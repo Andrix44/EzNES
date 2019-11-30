@@ -1293,7 +1293,5 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
 
     cycles += cycle_lut[instr];
 
-    if (increment_pc) {
-        pc += 1;
-    }
+    if (increment_pc) pc += 1;
 }

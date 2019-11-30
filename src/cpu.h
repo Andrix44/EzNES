@@ -20,17 +20,12 @@ enum class Addressing {
     ind = 0,
     ind_X,
     ind_Y,
-
-    // TODO: remove these later
-    rel,
-    zpg,
-    zpg_X,
-    zpg_Y
 };
 
 class Cpu {
 public:
     void Run();
+    void Power();
     void Reset();
     void IRQ();
     void NMI();

@@ -1,11 +1,11 @@
 #include <stdio.h>
 
 #include "memory.h"
+#include "ppu.h"
 
 
 Memory::Memory() {
-    cpu_memory.resize(CPU_MEMORY_SIZE);
-    ppu_memory.resize(PPU_MEMORY_SIZE);
+    cpu_memory.resize(0x10000);
 }
 
 Memory::~Memory() {
@@ -16,21 +16,24 @@ bool Memory::LoadROM(const char* location) {
     if (fopen_s(&input_ROM, location, "rb")) {
         log_helper.AddLog("Error while opening ROM!\n");
     }
-    log_helper.AddLog("\nLoading ROM at " + static_cast<std::string>(location) + "\n");
+    log_helper.AddLog("\nLoading ROM at " + static_cast<std::string>(location) + '\n');
     // TODO: add more error checking
 
     if (ReadHeader()) return true; // Error occured
-    uint32_t romsize = HEADER_SIZE + prg_rom_size + chr_rom_size;
-    game_data.resize(romsize);
-    fseek(input_ROM, 0, SEEK_SET);
-    fread(&game_data[0], 1, romsize, input_ROM);
+
+    uint16_t offset = 0x10;
+    if (trainer) offset += 0x200;
+
+    fseek(input_ROM, offset, SEEK_SET);
+    fread(&prg_memory[0], 1, prg_rom_size, input_ROM);
+    fread(&chr_memory[0], 1, chr_rom_size, input_ROM);
 
     fclose(input_ROM);
     return false;
 }
 
 bool Memory::ReadHeader() {
-    fread(&header[0], 1, HEADER_SIZE, input_ROM);
+    fread(&header[0], 1, 0x10, input_ROM);
 
     if (!(header[0] == (int)"N"[0] && header[1] == (int)"E"[0] && header[2] == (int)"S"[0] && header[3] == 0x1A)) {
         log_helper.AddLog("Unknown file format!\n");
@@ -48,6 +51,7 @@ bool Memory::ReadHeader() {
     }
     if (!NES_ver_2) {  // iNES header
         prg_rom_size = (header[4]) * 0x4000;
+        prg_memory.resize(prg_rom_size);
         if (header[5] == 0) {
             chr_ram_size = 0x2000;
             chr_rom_size = 0;
@@ -55,6 +59,7 @@ bool Memory::ReadHeader() {
             chr_ram_size = 0;
             chr_rom_size = (header[5]) * 0x2000;
         }
+        chr_memory.resize(static_cast<uint64_t>(chr_rom_size) + chr_ram_size);  // One of them is always going to be 0
         mirroring = (header[6] & 0x1) ? Mirroring::vertical : Mirroring::horizontal;
         prg_ram_battery = header[6] & 0x2;
         trainer = header[6] & 0x4;
@@ -140,7 +145,14 @@ bool Memory::ReadHeader() {
 
 bool Memory::SetupMapper() {
     if (mapper == 0) { // NROM
-        curr_mapper = new NROM(prg_rom_size, cpu_memory, game_data);
+        memcpy(&cpu_memory[0x8000], &prg_memory[0], 0x4000);
+
+        bool nrom_256 = false;
+        if (prg_rom_size == 0x8000) nrom_256 = true;
+        if (nrom_256) memcpy(&cpu_memory[0xC000], &prg_memory[0x4000], 0x4000);
+
+        memcpy(&ppu->ppu_memory[0], &chr_memory[0], 0x2000);
+        curr_mapper = new NROM(nrom_256);
         return 0;
     }
 
@@ -148,39 +160,75 @@ bool Memory::SetupMapper() {
 }
 
 uint8_t Memory::Read(const uint16_t addr) {
-    if (addr <= 0x1FFF) return cpu_memory[addr & 0x7FF];
+    if (addr <= 0x1FFF) return cpu_ram[addr & 0x7FF];
 
-    else if (addr >= 0x2000 && addr <= 0x3FFF) return cpu_memory[(addr & 0x7) + 0x2000LL];
+    else if (addr >= 0x2000 && addr <= 0x3FFF) return ppu->ReadPpuReg(addr & 0x7);
+
+    else if (addr >= 0x4000 && addr <= 0x4017) return 0;  // TODO: APU
 
     else return cpu_memory[curr_mapper->TranslateAddress(addr)];
 }
 
 void Memory::Write(const uint16_t addr, const uint8_t byte) {
-    if (addr <= 0x1FFF) cpu_memory[addr] = byte;
+    if (addr <= 0x1FFF) cpu_ram[addr & 0x7FF] = byte;
 
-    else if (addr >= 0x2000 && addr <= 0x3FFF) cpu_memory[(addr & 0x7) + 0x2000LL] = byte;
+    else if (addr >= 0x2000 && addr <= 0x3FFF) ppu->WritePpuReg(addr & 0x7, byte);
+
+    else if (addr >= 0x4000 && addr <= 0x4017);  // TODO: APU
 
     else cpu_memory[curr_mapper->TranslateAddress(addr)] = byte;
 }
+uint8_t Memory::PpuRead(/*const*/ uint16_t addr) {
+    //assert(addr <= 0x3FFF);
+    addr &= 0x3FFF;
 
-uint8_t Memory::PpuRead(const uint16_t addr) {
-    assert(addr <= 0x3FFF);
+    if (addr <= 0x1FFF) return ppu->ppu_memory[curr_mapper->TranslatePpuAddress(addr)];
 
-    if (addr <= 0x1FFF) return ppu_memory[curr_mapper->TranslatePpuAddress(addr)];
+    else if (addr >= 0x2000 && addr <= 0x3EFF) {
+        if (mirroring == Mirroring::vertical) {
+            return ppu->ppu_memory[addr & 0x27FF];
+        }
+        else if (mirroring == Mirroring::horizontal) {
+            return ppu->ppu_memory[addr & 0x2BFF];
+        }
+        else {
+            assert(0);  // Unimplemented
+            return 0;
+        }
+    }
 
-    else if (addr >= 0x2000 && addr <= 0x2FFF) return ppu_memory[addr];
+    else {
+        uint16_t temp = addr & 0x3F1F;
+        if (temp == 0x3F10) temp = 0x3F00;
+        else if (temp == 0x3F14) temp = 0x3F04;
+        else if (temp == 0x3F18) temp = 0x3F08;
+        else if (temp == 0x3F1C) temp = 0x3F0C;
 
-    else if (addr >= 0x3000 && addr <= 0x3EFF) return ppu_memory[addr - 0x1000LL];
-
-    else return ppu_memory[addr & 0x3F1F];
+        return ppu->ppu_memory[temp] & (ppu->GetGreyscale() ? 0x30 : 0x3F);
+    }
 }
 
 void Memory::PpuWrite(const uint16_t addr, const uint8_t byte) {
-    if (addr <= 0x1FFF) ppu_memory[curr_mapper->TranslatePpuAddress(addr)] = byte;
+    assert(addr <= 0x3FFF);
 
-    else if (addr >= 0x2000 && addr <= 0x2FFF) ppu_memory[addr] = byte;
+    if (addr <= 0x1FFF) ppu->ppu_memory[curr_mapper->TranslatePpuAddress(addr)] = byte;
 
-    else if (addr >= 0x3000 && addr <= 0x3EFF) ppu_memory[addr - 0x1000LL] = byte;
+    else if (addr >= 0x2000 && addr <= 0x3EFF) {
+        if (mirroring == Mirroring::vertical) {
+            ppu->ppu_memory[addr & 0x27FF] = byte;
+        }
+        else if (mirroring == Mirroring::horizontal) {
+            ppu->ppu_memory[addr & 0x2BFF] = byte;
+        }
+    }
 
-    else ppu_memory[addr & 0x3F1F] = byte;
+    else {
+        uint16_t temp = addr & 0x3F1F;
+        if (temp == 0x3F10) temp = 0x3F00;
+        else if (temp == 0x3F14) temp = 0x3F04;
+        else if (temp == 0x3F18) temp = 0x3F08;
+        else if (temp == 0x3F1C) temp = 0x3F0C;
+
+        ppu->ppu_memory[temp] = byte;
+    }
 }

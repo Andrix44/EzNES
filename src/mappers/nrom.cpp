@@ -1,12 +1,8 @@
 #include "nrom.h"
 
 
-NROM::NROM(uint32_t prg_rom_size, std::vector<uint8_t>& cpu_memory, std::vector<uint8_t>& game_data) {
-    if (prg_rom_size == 0x8000) NROM_256 = true;
-
-    memcpy(&cpu_memory[0x8000], &game_data[0x10], 0x4000);
-
-    if (NROM_256) memcpy(&cpu_memory[0xC000], &game_data[0x10 + 0x4000], 0x4000);
+NROM::NROM(bool nrom_256) {
+    NROM_256 = nrom_256;
 }
 
 uint16_t NROM::TranslateAddress(const uint16_t addr) {

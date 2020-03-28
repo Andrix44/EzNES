@@ -10,18 +10,34 @@ void Cpu::Run() {
     flags[Flags::unused] = true;
 }
 
-void Cpu::Reset() {
+void Cpu::Power() {
     pc = (memory->Read(0xFFFD) << 8) | memory->Read(0xFFFC);
     A = X = Y = 0;
     sp = 0xFD;
-    flags = 0b00100100;
+    flags = 0b00110100;
+    cycles = 0;
+    cycles += 7;
+}
+
+void Cpu::Reset() {
+    pc = (memory->Read(0xFFFD) << 8) | memory->Read(0xFFFC);
+    sp -= 3;
+    flags |= 4;
+
+    // TODO: PPU reset stuff
+
+    memory->Write(0x4015, 0);  // Silence APU
+    // reset APU triangle phase to 0
+    // APU DPCM output & with 1
+    // APU frame counter reset
+
     cycles = 0;
     cycles += 7;
 }
 
 void Cpu::IRQ() {
     if (!flags[Flags::interrupt]) {
-        log_helper.AddLog("IRQ");
+        // log_helper.AddLog("IRQ\n");
         memory->Write(sp + 0x100, pc >> 8);
         --sp;
         memory->Write(sp + 0x100, pc & 0xFF);
@@ -39,7 +55,7 @@ void Cpu::IRQ() {
 }
 
 void Cpu::NMI() {
-    log_helper.AddLog("NMI");
+    // log_helper.AddLog("NMI\n");
     memory->Write(sp + 0x100, pc >> 8);
     --sp;
     memory->Write(sp + 0x100, pc & 0xFF);
@@ -145,9 +161,9 @@ void Cpu::CompareWithMemory(const uint8_t byte, const uint16_t addr) {
     pc += 1;
 }
 
-void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope that the compiler optimizes this into a jumptable
+void Cpu::Interpreter(const uint8_t instr) {
     bool increment_pc = true;
-    if (log_instr) {
+    if (log_instr) {  // TODO: C++20 will have an easy way to simplify this
         char instr_executed[5];
         sprintf_s(&instr_executed[0], sizeof(instr_executed), "0x%X", memory->Read(pc));
         char pc_char[7];
@@ -157,7 +173,7 @@ void Cpu::Interpreter(const uint8_t instr) {  // TODO: for now, let's just hope 
 
     switch (instr) {
     case 0x00: {  // BRK -I
-        log_helper.AddLog("BRK");
+        // log_helper.AddLog("BRK\n");
         pc += 1;
         memory->Write(sp + 0x100, pc >> 8);
         --sp;

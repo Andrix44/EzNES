@@ -5,17 +5,17 @@
 #include <string>
 #include <vector>
 
-#include <log.h>
+#include "log.h"
 
-#include <mappers/nrom.h>
+#include "mappers/nrom.h"
 
 
-constexpr int HEADER_SIZE = 0x10;
-constexpr int CPU_MEMORY_SIZE = 0x10000;
-constexpr int PPU_MEMORY_SIZE = 0x4000;
+class Ppu;
 
 class Memory {
 public:
+    Ppu* ppu = nullptr;
+
     Memory();
     ~Memory();
     bool LoadROM(const char* location);
@@ -23,21 +23,23 @@ public:
     bool SetupMapper();
     uint8_t Read(const uint16_t addr);
     void Write(const uint16_t addr, const uint8_t byte);
-    uint8_t PpuRead(const uint16_t addr);
+    uint8_t PpuRead(/*const*/ uint16_t addr);
     void PpuWrite(const uint16_t addr, const uint8_t byte);
 
     std::string rom_path = "";
 
 private:
     std::vector<uint8_t> cpu_memory = {};
-    std::vector<uint8_t> ppu_memory = {};
-    std::vector<uint8_t> game_data = {};
+    std::vector<uint8_t> prg_memory = {};
+    std::vector<uint8_t> chr_memory = {};
+    uint8_t cpu_ram[0x800] = {};
+
     FILE* input_ROM = nullptr;
 
     Mapper *curr_mapper = nullptr;
 
-    uint8_t header[HEADER_SIZE] = {0 * HEADER_SIZE};
-    uint32_t prg_rom_size = NULL, chr_rom_size = NULL;
+    uint8_t header[0x10] = {};
+    uint32_t prg_rom_size = 0, chr_rom_size = 0;
     std::bitset<8> flags_6 = 0b00000000;
     /*             mapper(0-3)-++++||||
                                    ||||
@@ -51,10 +53,10 @@ private:
         horizontal = 0,
         vertical
     } mirroring{};
-    uint16_t mapper = NULL;
-    uint8_t submapper = NULL;
-    uint32_t prg_ram_size = NULL, eeprom_size = NULL;
-    uint32_t chr_ram_size = NULL, chr_nvram_size = NULL;
+    uint16_t mapper = 0;
+    uint8_t submapper = 0;
+    uint32_t prg_ram_size = 0, eeprom_size = 0;
+    uint32_t chr_ram_size = 0, chr_nvram_size = 0;
     enum class ConsoleType {
         nes_famicom = 0,
         vs_system,
@@ -67,5 +69,5 @@ private:
         multi,
         dendy
     } region{};
-    uint8_t wip0 = NULL, wip1 = NULL, wip2 = NULL;
+    uint8_t wip0 = 0, wip1 = 0, wip2 = 0;
 };

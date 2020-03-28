@@ -5,7 +5,7 @@
 
 class NROM : public Mapper {
 public:
-    NROM(uint32_t prg_rom_size, std::vector<uint8_t>& cpu_memory, std::vector<uint8_t>& game_data);
+    NROM(bool nrom_256);
     uint16_t TranslateAddress(const uint16_t addr);
     uint16_t TranslatePpuAddress(const uint16_t addr);
 private:

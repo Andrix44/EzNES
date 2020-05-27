@@ -164,7 +164,14 @@ uint8_t Memory::Read(const uint16_t addr) {
 
     else if (addr >= 0x2000 && addr <= 0x3FFF) return ppu->ReadPpuReg(addr & 0x7);
 
-    else if (addr >= 0x4000 && addr <= 0x4017) return 0;  // TODO: APU
+    else if (addr >= 0x4000 && addr <= 0x4015) return 0;  // TODO: APU
+
+    else if (addr == 0x4016 || addr == 0x4017) {
+        uint8_t player_num = (addr == 0x4016) ? 0 : 1;
+        bool is_pressed = controller_shift[player_num] & 0x80;
+        controller_shift[player_num] <<= 1;
+        return is_pressed;
+    }
 
     else return cpu_memory[curr_mapper->TranslateAddress(addr)];
 }
@@ -174,7 +181,12 @@ void Memory::Write(const uint16_t addr, const uint8_t byte) {
 
     else if (addr >= 0x2000 && addr <= 0x3FFF) ppu->WritePpuReg(addr & 0x7, byte);
 
-    else if (addr >= 0x4000 && addr <= 0x4017);  // TODO: APU
+    else if (addr >= 0x4000 && addr <= 0x4015);  // TODO: APU
+
+    else if (addr == 0x4016 || addr == 0x4017) {
+        uint8_t player_num = (addr == 0x4016) ? 0 : 1;
+        controller_shift[player_num] = static_cast<uint8_t>(controller[player_num].to_ulong());
+    }
 
     else cpu_memory[curr_mapper->TranslateAddress(addr)] = byte;
 }

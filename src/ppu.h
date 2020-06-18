@@ -7,7 +7,7 @@ class Ppu {
 public:
     Memory* memory = nullptr;
 
-    std::vector<uint8_t> ppu_memory = {};
+    std::vector<uint8_t> ppu_memory{};
 
     bool nmi = false;
     bool frame_done = false;
@@ -25,19 +25,19 @@ public:
     void WritePpuReg(uint8_t id, uint8_t byte);
     uint8_t ReadPpuReg(uint8_t id);
 
-    bool GetGreyscale();
+    inline bool GetGreyscale();
 
 private:
     std::array<uint32_t, 0x40> palette;
 
-    int16_t scanline = 0, cycle = 0;
+    int16_t scanline{}, cycle{};
     //uint32_t obj_attr_mem[64] = {};
-    uint8_t addr_latch = 0, ppu_addr_buff = 0;
-    uint8_t fine_x = 0;
-    uint8_t bg_next_tile_id = 0, bg_next_tile_attr = 0, bg_next_tile_lsb = 0, bg_next_tile_msb = 0;
-    uint16_t bg_shift_pattern_lo = 0, bg_shift_pattern_hi = 0, bg_shift_attrib_lo = 0, bg_shift_attrib_hi = 0;
-    uint16_t bitmask = 0;
-    uint8_t bg_pixel = 0, bg_palette = 0, pix_hi = 0, pix_lo = 0, pal_hi = 0, pal_lo = 0;
+    uint8_t addr_latch{}, ppu_addr_buff{};
+    uint8_t fine_x{};
+    uint8_t bg_next_tile_id{}, bg_next_tile_attr{}, bg_next_tile_lsb{}, bg_next_tile_msb{};
+    uint16_t bg_shift_pattern_lo{}, bg_shift_pattern_hi{}, bg_shift_attrib_lo{}, bg_shift_attrib_hi{};
+    uint16_t bitmask{};
+    uint8_t bg_pixel{}, bg_palette{}, pix_hi{}, pix_lo{}, pal_hi{}, pal_lo{};
 
     union {
         struct {
@@ -48,7 +48,7 @@ private:
             uint16_t fine_y : 3;
             uint16_t unused : 1;
         };
-        uint16_t raw = 0;
+        uint16_t raw{};
     } vram_addr, temp_vram_addr;
 
     union {
@@ -62,7 +62,7 @@ private:
             uint8_t ppu_slave : 1;
             uint8_t gen_nmi : 1;
         };
-        uint8_t raw = 0;
+        uint8_t raw{};
     } PPUCTRL;
 
     union {
@@ -76,7 +76,7 @@ private:
             uint8_t boost_green : 1;
             uint8_t boost_blue : 1;
         };
-        uint8_t raw = 0;
+        uint8_t raw{};
     } PPUMASK;
 
     union {
@@ -86,8 +86,8 @@ private:
             uint8_t sprite_0_hit : 1;
             uint8_t vblank : 1;
         };
-        uint8_t raw = 0;
+        uint8_t raw{};
     } PPUSTATUS;
 
-    uint32_t GetColorFromPalette(uint8_t palette_id, uint8_t pixel);
+    inline uint32_t GetColorFromPalette(uint8_t palette_id, uint8_t pixel);
 };

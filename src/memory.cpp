@@ -197,7 +197,7 @@ uint8_t Memory::PpuRead(/*const*/ uint16_t addr) {
         }
     }
 
-    else {
+    else {  // I extracted this into the Ppu::GetColorFromPalette function to make it faster
         uint16_t temp = addr & 0x3F1F;
         if (temp == 0x3F10) temp = 0x3F00;
         else if (temp == 0x3F14) temp = 0x3F04;

@@ -125,7 +125,7 @@ void Ppu::Run() {
         bg_palette = (pal_hi << 1) | pal_lo;
     }
 
-    if(scanline >= 0 && scanline <= 239 && cycle > 0 && cycle <= 255) (*image_data)[scanline][static_cast<uint64_t>(cycle) - 1] = GetColorFromPalette(bg_palette, bg_pixel);
+    if(scanline >= 0 && scanline <= 239 && cycle > 0 && cycle <= 255) (*image_data)[scanline][cycle - 1] = GetColorFromPalette(bg_palette, bg_pixel);
 
     ++cycle;
     if (cycle >= 341) {
@@ -146,8 +146,15 @@ void Ppu::Reset() {
     bg_shift_pattern_lo = 0; bg_shift_pattern_hi = 0; bg_shift_attrib_lo = 0; bg_shift_attrib_hi = 0;
 }
 
-uint32_t Ppu::GetColorFromPalette(uint8_t palette_id, uint8_t pixel) {
-    return palette[memory->PpuRead(0x3F00 + (palette_id << 2) + pixel) & 0x3F];
+inline uint32_t Ppu::GetColorFromPalette(uint8_t palette_id, uint8_t pixel) {
+    // return palette[memory->PpuRead(0x3F00 + (palette_id << 2) + pixel)];
+    uint8_t temp = (palette_id << 2) + pixel;
+    if (temp == 0x10) temp = 0x00;
+    else if (temp == 0x14) temp = 0x04;
+    else if (temp == 0x18) temp = 0x08;
+    else if (temp == 0x1C) temp = 0x0C;
+
+    return palette[ppu_memory[0x3F00 + temp] & (GetGreyscale() ? 0x30 : 0x3F)];
 }
 
 void Ppu::SetPatternTables(uint8_t palette_id) {
@@ -278,6 +285,6 @@ uint8_t Ppu::ReadPpuReg(uint8_t id) {
     return data;
 }
 
-bool Ppu::GetGreyscale() {
+inline bool Ppu::GetGreyscale() {
     return PPUMASK.greyscale;
 }

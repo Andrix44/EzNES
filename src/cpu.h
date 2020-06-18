@@ -33,8 +33,8 @@ public:
     bool log_instr = false;
     Memory* memory = nullptr;
 
-    uint8_t A = 0x00, X = 0x00, Y = 0x00;
-    uint8_t sp = 0x0;
+    uint8_t A{}, X{}, Y{};
+    uint8_t sp{};
     uint16_t pc = 0x0000;
     std::bitset<8> flags = 0b00000000;
     /*              negative-||||||||
@@ -45,7 +45,7 @@ public:
            interrupt disable------|||
                         zero-------||
                        carry--------| */
-    uint64_t cycles = 0;
+    uint64_t cycles{};
     uint8_t cycle_lut[256] = {7, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 0, 4, 6, 0,
                               2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
                               6, 6, 0, 0, 3, 3, 5, 0, 4, 2, 2, 0, 4, 4, 6, 0,
@@ -76,6 +76,6 @@ private:
     void SubMemFromAccWithBorrow(const uint16_t addr);
     void CompareWithMemory(const uint8_t byte, const uint16_t addr);
 
-    uint8_t instr = NULL;
+    uint8_t instr{};
 };
 

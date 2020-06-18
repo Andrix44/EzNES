@@ -29,17 +29,17 @@ public:
     std::string rom_path = "";
 
 private:
-    std::vector<uint8_t> cpu_memory = {};
-    std::vector<uint8_t> prg_memory = {};
-    std::vector<uint8_t> chr_memory = {};
-    uint8_t cpu_ram[0x800] = {};
+    std::vector<uint8_t> cpu_memory{};
+    std::vector<uint8_t> prg_memory{};
+    std::vector<uint8_t> chr_memory{};
+    uint8_t cpu_ram[0x800]{};
 
     FILE* input_ROM = nullptr;
 
     Mapper *curr_mapper = nullptr;
 
-    uint8_t header[0x10] = {};
-    uint32_t prg_rom_size = 0, chr_rom_size = 0;
+    uint8_t header[0x10]{};
+    uint32_t prg_rom_size{}, chr_rom_size{};
     std::bitset<8> flags_6 = 0b00000000;
     /*             mapper(0-3)-++++||||
                                    ||||
@@ -53,10 +53,10 @@ private:
         horizontal = 0,
         vertical
     } mirroring{};
-    uint16_t mapper = 0;
-    uint8_t submapper = 0;
-    uint32_t prg_ram_size = 0, eeprom_size = 0;
-    uint32_t chr_ram_size = 0, chr_nvram_size = 0;
+    uint16_t mapper{};
+    uint8_t submapper{};
+    uint32_t prg_ram_size{}, eeprom_size{};
+    uint32_t chr_ram_size{}, chr_nvram_size{};
     enum class ConsoleType {
         nes_famicom = 0,
         vs_system,
@@ -69,5 +69,5 @@ private:
         multi,
         dendy
     } region{};
-    uint8_t wip0 = 0, wip1 = 0, wip2 = 0;
+    uint8_t wip0{}, wip1{}, wip2{};
 };

@@ -16,12 +16,6 @@ enum Flags {
     overflow, negative
 };
 
-enum class Addressing {
-    ind = 0,
-    ind_X,
-    ind_Y,
-};
-
 class Cpu {
 public:
     void Run();

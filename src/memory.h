@@ -27,6 +27,8 @@ public:
     void PpuWrite(const uint16_t addr, const uint8_t byte);
 
     std::string rom_path = "";
+    std::bitset<8> controller[2] = {0b00000000, 0b00000000};
+    uint8_t controller_shift[2] = {0, 0};
 
 private:
     std::vector<uint8_t> cpu_memory{};

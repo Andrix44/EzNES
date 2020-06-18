@@ -21,7 +21,7 @@ constexpr int display_height = 240;
 
 bool LoadROM(Memory& mem, Cpu& cpu, Ppu& ppu);
 void Clock(Cpu& cpu, Ppu& ppu);
-void Frame(double elapsed_time, Cpu& cpu, Ppu& ppu);
+void Frame(double elapsed_time, Cpu& cpu, Ppu& ppu, GLuint& framebuffer);
 void DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* msg, const void* data);
 inline void SetTexParams();
 
@@ -55,7 +55,7 @@ int main(int argc, char* argv[]){
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Keyboard
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Keyboard
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Maybe later
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -69,6 +69,8 @@ int main(int argc, char* argv[]){
     ppu.memory = &mem;
     mem.ppu = &ppu;
 
+    bool multiplayer_enabled = true;
+
     bool emulation_running = false;
     bool rom_loaded = false;
     bool run_immediately = true;
@@ -77,10 +79,10 @@ int main(int argc, char* argv[]){
 
     bool show_log_window = false;
     bool show_demo_window = false;
-    bool show_debug_window = true;
-    bool show_palette = true;  // TODO: These should be disabled by default when the emu is finished
-    bool show_pattern_tables = true;
-    bool show_nametables = true;
+    bool show_debug_window = false;
+    bool show_palette = false;
+    bool show_pattern_tables = false;
+    bool show_nametables = false;
     uint8_t selected_palette = 0;
 
     ImVec4 red(1.0f, 0.0f, 0.0f, 1.0f);
@@ -161,9 +163,26 @@ int main(int argc, char* argv[]){
                 glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 256, 240, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, ppu.nametable_data->data() + 3);
 
             }
+            mem.controller[0][0] = ImGui::IsKeyDown(GLFW_KEY_D);  // Right
+            mem.controller[0][1] = ImGui::IsKeyDown(GLFW_KEY_A);  // Left
+            mem.controller[0][2] = ImGui::IsKeyDown(GLFW_KEY_S);  // Down
+            mem.controller[0][3] = ImGui::IsKeyDown(GLFW_KEY_W);  // Up
+            mem.controller[0][4] = ImGui::IsKeyDown(GLFW_KEY_O);  // Start
+            mem.controller[0][5] = ImGui::IsKeyDown(GLFW_KEY_I);  // Select
+            mem.controller[0][6] = ImGui::IsKeyDown(GLFW_KEY_K);  // B
+            mem.controller[0][7] = ImGui::IsKeyDown(GLFW_KEY_L);  // A
+            if (multiplayer_enabled) {
+                mem.controller[1][0] = ImGui::IsKeyDown(GLFW_KEY_RIGHT);  // Right
+                mem.controller[1][1] = ImGui::IsKeyDown(GLFW_KEY_LEFT);  // Left
+                mem.controller[1][2] = ImGui::IsKeyDown(GLFW_KEY_DOWN);  // Down
+                mem.controller[1][3] = ImGui::IsKeyDown(GLFW_KEY_UP);  // Up
+                mem.controller[1][4] = ImGui::IsKeyDown(GLFW_KEY_KP_5);  // Start
+                mem.controller[1][5] = ImGui::IsKeyDown(GLFW_KEY_KP_4);  // Select
+                mem.controller[1][6] = ImGui::IsKeyDown(GLFW_KEY_KP_1);  // B
+                mem.controller[1][7] = ImGui::IsKeyDown(GLFW_KEY_KP_2);  // A
+            }
 
-            glBindTexture(GL_TEXTURE_2D, framebuffer);
-            Frame(elapsed_time, cpu, ppu);
+            Frame(elapsed_time, cpu, ppu, framebuffer);
         }
 
         if (ImGui::BeginMainMenuBar()) {
@@ -195,6 +214,7 @@ int main(int argc, char* argv[]){
                 ImGui::EndMenu();
                 
             }
+            ImGui::Checkbox("Enable second controller", &multiplayer_enabled);
             ImGui::EndMainMenuBar();
         }
 
@@ -256,7 +276,7 @@ int main(int argc, char* argv[]){
             }
             ImGui::SameLine();
             if (ImGui::Button("Frame")) {
-                if (rom_loaded) Frame(0.017f, cpu, ppu);
+                if (rom_loaded) Frame(0.017f, cpu, ppu, framebuffer);
             }
             ImGui::SameLine();
             ImGui::Checkbox("Run immediately", &run_immediately);
@@ -354,12 +374,13 @@ void Clock(Cpu& cpu, Ppu& ppu) {
     ++clock_count;
 }
 
-void Frame(double elapsed_time ,Cpu& cpu, Ppu& ppu) {
+void Frame(double elapsed_time ,Cpu& cpu, Ppu& ppu, GLuint& framebuffer) {
     static double time_left = 0;
     if (time_left > 0.0f) time_left -= elapsed_time;
     else {
         time_left += (1.0f / 60.0f) - elapsed_time;
         while (!ppu.frame_done) Clock(cpu, ppu);
+        glBindTexture(GL_TEXTURE_2D, framebuffer);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, display_width, display_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, ppu.image_data->data());
         ppu.frame_done = false;
     }

@@ -125,7 +125,7 @@ void Ppu::Run() {
         bg_palette = (pal_hi << 1) | pal_lo;
     }
 
-    if(scanline >= 0 && scanline <= 239 && cycle > 0 && cycle <= 255) (*image_data)[scanline][cycle - 1] = GetColorFromPalette(bg_palette, bg_pixel);
+    if(scanline >= 0 && scanline <= 239 && cycle > 0 && cycle <= 255) (*image_data)[scanline][cycle - 1LL] = GetColorFromPalette(bg_palette, bg_pixel);
 
     ++cycle;
     if (cycle >= 341) {
@@ -154,7 +154,7 @@ inline uint32_t Ppu::GetColorFromPalette(uint8_t palette_id, uint8_t pixel) {
     else if (temp == 0x18) temp = 0x08;
     else if (temp == 0x1C) temp = 0x0C;
 
-    return palette[ppu_memory[0x3F00 + temp] & (GetGreyscale() ? 0x30 : 0x3F)];
+    return palette[ppu_memory[0x3F00LL + temp] & (GetGreyscale() ? 0x30 : 0x3F)];
 }
 
 void Ppu::SetPatternTables(uint8_t palette_id) {
@@ -169,7 +169,7 @@ void Ppu::SetPatternTables(uint8_t palette_id) {
                         uint8_t pixel = ((msb & 1) << 1) | (lsb & 1);
                         lsb >>= 1; msb >>= 1;
 
-                        (*pattern_table_data)[ptable][Y * 8 + row][X * 8 + (7 - col)] = GetColorFromPalette(palette_id, pixel);
+                        (*pattern_table_data)[ptable][Y * 8LL + row][X * 8LL + (7LL - col)] = GetColorFromPalette(palette_id, pixel);
                     }
                 }
             }
@@ -200,7 +200,7 @@ void Ppu::SetNametables() {  // TODO: optimize this with mirroring detection
                         uint8_t pixel = ((msb & 1) << 1) | (lsb & 1);
                         lsb >>= 1; msb >>= 1;
 
-                        (*nametable_data)[ntable][Y * 8 + row][X * 8 + (7 - col)] = GetColorFromPalette(palette_id, pixel);
+                        (*nametable_data)[ntable][Y * 8LL + row][X * 8LL + (7LL - col)] = GetColorFromPalette(palette_id, pixel);
                     }
                 }
             }

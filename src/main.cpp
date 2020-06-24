@@ -74,8 +74,8 @@ int main(int argc, char* argv[]){
     bool emulation_running = false;
     bool rom_loaded = false;
     bool run_immediately = true;
-    double elapsed_time = 0;
-    std::clock_t begin = 0, end = 0;
+    double elapsed_time{};
+    std::clock_t begin{}, end{};
 
     bool show_log_window = false;
     bool show_demo_window = false;
@@ -83,14 +83,14 @@ int main(int argc, char* argv[]){
     bool show_palette = false;
     bool show_pattern_tables = false;
     bool show_nametables = false;
-    uint8_t selected_palette = 0;
+    uint8_t selected_palette{};
 
     ImVec4 red(1.0f, 0.0f, 0.0f, 1.0f);
     ImVec4 green(0.0f, 1.0f, 0.0f, 1.0f);
     ImVec4 color(0.0f, 0.0f, 0.0f, 0.0f);
     std::string flag_names[8] = { "Carry", "Zero", "Interrupt", "BCD", "Breakpoint", "-", "Overflow", "Negative" };
 
-    GLuint framebuffer = 0, pattern_table_0 = 0, pattern_table_1 = 0, palette = 0, nametable_0 = 0, nametable_1 = 0, nametable_2 = 0, nametable_3 = 0;
+    GLuint framebuffer{}, pattern_table_0{}, pattern_table_1{}, palette{}, nametable_0{}, nametable_1{}, nametable_2{}, nametable_3{};
     glGenTextures(1, &framebuffer); glGenTextures(1, &pattern_table_0); glGenTextures(1, &pattern_table_1); glGenTextures(1, &palette);
     glGenTextures(1, &nametable_0); glGenTextures(1, &nametable_1); glGenTextures(1, &nametable_2); glGenTextures(1, &nametable_3);
 
@@ -199,7 +199,9 @@ int main(int argc, char* argv[]){
                 if (ImGui::MenuItem("Pause", "", false)) emulation_running = false;
                 if (ImGui::MenuItem("Reload", "", false)) {
                     if (rom_loaded) {
-                        mem.LoadROM(mem.rom_path.c_str());
+                        // Hopefully the ROMs don't modify themselves in memory so I can just reset the registers
+                        cpu.Power();  // The CPU does some weird stuff on reset, so I just set it to power-on instead
+                        ppu.Reset();
                     }
                 }
                 ImGui::EndMenu();
@@ -270,10 +272,6 @@ int main(int argc, char* argv[]){
             }
             ImGui::SameLine();
             if (ImGui::Button("Stop")) emulation_running = false;
-            ImGui::SameLine();
-            if (ImGui::Button("Step")) {
-                Clock(cpu, ppu); Clock(cpu, ppu); Clock(cpu, ppu);
-            }
             ImGui::SameLine();
             if (ImGui::Button("Frame")) {
                 if (rom_loaded) Frame(0.017f, cpu, ppu, framebuffer);

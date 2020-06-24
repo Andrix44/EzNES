@@ -2,12 +2,9 @@
 
 
 void Cpu::Run() {
-    if (!flags[Flags::unused]) {  // Prevents an access violation if some of the buttons are pressed before a rom is loaded
-        return;
-    }
     instr = memory->Read(pc);
     Interpreter(instr);
-    flags[Flags::unused] = true;
+    // flags[Flags::unused] = true;
 }
 
 void Cpu::Power() {

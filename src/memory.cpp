@@ -8,12 +8,8 @@ Memory::Memory() {
     cpu_memory.resize(0x10000);
 }
 
-Memory::~Memory() {
-    delete curr_mapper;
-}
-
-bool Memory::LoadROM(const char* location) {
-    if (fopen_s(&input_ROM, location, "rb")) {
+bool Memory::LoadROM(std::string location) {
+    if (fopen_s(&input_ROM, location.c_str(), "rb")) {
         log_helper.AddLog("Error while opening ROM!\n");
     }
     log_helper.AddLog("\nLoading ROM at " + static_cast<std::string>(location) + '\n');
@@ -152,7 +148,7 @@ bool Memory::SetupMapper() {
         if (nrom_256) memcpy(&cpu_memory[0xC000], &prg_memory[0x4000], 0x4000);
 
         memcpy(&ppu->ppu_memory[0], &chr_memory[0], 0x2000);
-        curr_mapper = new NROM(nrom_256);
+        curr_mapper = std::make_unique<NROM>(nrom_256);
         return 0;
     }
 

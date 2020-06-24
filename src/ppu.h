@@ -11,6 +11,7 @@ public:
 
     bool nmi = false;
     bool frame_done = false;
+    // TODO: Why can't I use auto here?
     std::array<std::array<uint32_t, 256>, 240>* image_data = new std::array<std::array<uint32_t, 256>, 240>;
     std::array<std::array<std::array<uint32_t, 128>, 128>, 2>* pattern_table_data = new std::array<std::array<std::array<uint32_t, 128>, 128>, 2>;
     std::array<std::array<uint32_t, 16>, 2>* palette_data = new std::array<std::array<uint32_t, 16>, 2>;

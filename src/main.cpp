@@ -189,7 +189,7 @@ int main(int argc, char* argv[]){
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("Load ROM", "", false)) {
                     rom_loaded = LoadROM(mem, cpu, ppu);
-                    if (run_immediately && rom_loaded) emulation_running = true;
+                    emulation_running = (run_immediately && rom_loaded)? true : false;
                 }
                 if (ImGui::MenuItem("Exit", "", false)) glfwSetWindowShouldClose(window, 1);
                 ImGui::EndMenu();

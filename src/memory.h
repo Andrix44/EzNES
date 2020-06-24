@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bitset>
+#include <memory>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -17,14 +18,13 @@ public:
     Ppu* ppu = nullptr;
 
     Memory();
-    ~Memory();
-    bool LoadROM(const char* location);
+    bool LoadROM(std::string location);
     bool ReadHeader();
     bool SetupMapper();
-    uint8_t Read(const uint16_t addr);
-    void Write(const uint16_t addr, const uint8_t byte);
-    uint8_t PpuRead(/*const*/ uint16_t addr);
-    void PpuWrite(const uint16_t addr, const uint8_t byte);
+    uint8_t Read(uint16_t addr);
+    void Write(uint16_t addr, uint8_t byte);
+    uint8_t PpuRead(uint16_t addr);
+    void PpuWrite(uint16_t addr, uint8_t byte);
 
     std::string rom_path = "";
     std::bitset<8> controller[2] = {0b00000000, 0b00000000};
@@ -38,7 +38,7 @@ private:
 
     FILE* input_ROM = nullptr;
 
-    Mapper *curr_mapper = nullptr;
+    std::unique_ptr<Mapper> curr_mapper{};
 
     uint8_t header[0x10]{};
     uint32_t prg_rom_size{}, chr_rom_size{};

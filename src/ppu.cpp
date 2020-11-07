@@ -35,7 +35,7 @@ void Ppu::Run() {
                 bg_shift_attrib_hi <<= 1; bg_shift_attrib_lo <<= 1;
             }
 
-            uint16_t temp = 0;
+            uint16_t temp{};
             switch ((cycle - 1) % 8) {
             case 0:
                 bg_shift_pattern_hi &= 0xFF00; bg_shift_pattern_hi |= bg_next_tile_msb;
@@ -221,8 +221,10 @@ void Ppu::WritePpuReg(uint8_t id, uint8_t byte) {
     case 2:  // PPUSTATUS
         break;
     case 3:  // OAMADDR
+        OAM_addr = byte;
         break;
     case 4:  // OAMDATA
+        OAM_ptr[OAM_addr] = byte;
         break;
     case 5:  // PPUSCROLL
         if (addr_latch == 0) {
@@ -255,7 +257,7 @@ void Ppu::WritePpuReg(uint8_t id, uint8_t byte) {
 }
 
 uint8_t Ppu::ReadPpuReg(uint8_t id) {
-    uint8_t data = 0;
+    uint8_t data{};
     switch (id) {
     case 0:  // PPUCTRL
         break;
@@ -269,6 +271,7 @@ uint8_t Ppu::ReadPpuReg(uint8_t id) {
     case 3:  // OAMADDR
         break;
     case 4:  // OAMDATA
+        data = OAM_ptr[OAM_addr];
         break;
     case 5:  // PPUSCROLL
         break;

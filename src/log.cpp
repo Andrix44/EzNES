@@ -2,6 +2,8 @@
 
 
 void Logging::AddLog(std::string entry) {
+    if (buff.size() > 0x10000) buff.clear();
+    last_message = entry;
     buff.append(entry.c_str());
     if (scroll_enabled) scroll_to_bottom = true;
 }
@@ -28,6 +30,10 @@ void Logging::Draw(bool *show_log_window) {
     scroll_to_bottom = false;
     ImGui::EndChild();
     ImGui::End();
+}
+
+std::string Logging::GetLastMessage() {
+    return last_message;
 }
 
 Logging log_helper;

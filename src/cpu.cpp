@@ -1301,7 +1301,10 @@ void Cpu::Interpreter(const uint8_t instr) {
         increment_pc = false;
         char unimpl_instr[5];
         sprintf_s(&unimpl_instr[0], sizeof(unimpl_instr), "0x%X", memory->Read(pc));
-        log_helper.AddLog("\nUnimplemented instruction " + std::string(unimpl_instr));
+        std::string error_message = "\nUnimplemented instruction " + std::string(unimpl_instr);
+        if (log_helper.GetLastMessage() != error_message) {
+            log_helper.AddLog(error_message);
+        }
     }
 
     cycles += cycle_lut[instr];

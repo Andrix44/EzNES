@@ -32,7 +32,6 @@ private:
     std::array<uint32_t, 0x40> palette;
 
     int16_t scanline{}, cycle{};
-    //uint32_t obj_attr_mem[64] = {};
     uint8_t addr_latch{}, ppu_addr_buff{};
     uint8_t fine_x{};
     uint8_t bg_next_tile_id{}, bg_next_tile_attr{}, bg_next_tile_lsb{}, bg_next_tile_msb{};
@@ -89,6 +88,15 @@ private:
         };
         uint8_t raw{};
     } PPUSTATUS;
+
+    struct OAM_elem {
+        uint8_t pos_y{};
+        uint8_t tile_index{};
+        uint8_t attrib{};
+        uint8_t pos_x{};
+    } OAM[64];
+    uint8_t* OAM_ptr = reinterpret_cast<uint8_t*>(&OAM[0]);
+    uint8_t OAM_addr{};
 
     inline uint32_t GetColorFromPalette(uint8_t palette_id, uint8_t pixel);
 };
